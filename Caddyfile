@@ -1,0 +1,7 @@
+:{$PORT:80} {
+    root * /app/public
+    encode zstd gzip
+    @private path /firebase_config.php /runtime_bootstrap.php /.user.ini /admin/_lib.php /payment-logs.txt /webhook-logs.txt /webhook_debug.txt /transactions.json /pending.json /pending_transactions.json /valid-transactions.json /valid_transactions.txt /access_log /info.php
+    respond @private 404
+    php_server
+}
