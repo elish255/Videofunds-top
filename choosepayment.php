@@ -138,10 +138,6 @@ $balance=(float)($profile['balance']??5.00);
     </div>
 </div>
 
-<footer>
-    <div class="container">
-        <p class="m-0 text-center text-white">Copyright &copy; videofunds.top 2007-2025</p>
-    </div>
-</footer>
+<?php require __DIR__ . '/includes/site-footer.php'; ?>
 </body>
 </html>

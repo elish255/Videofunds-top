@@ -202,5 +202,6 @@
   }
   setInterval(showNotification, 8000);
 </script>
+<?php require __DIR__ . '/includes/site-footer.php'; ?>
 </body>
 </html>

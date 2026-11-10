@@ -103,7 +103,6 @@ if(!$profile || !empty($profile['banned'])){sb_clear_auth_cookies();header('Loca
     </div>
 </div>
 
-<footer><div class="container"><p class="m-0 text-center text-white">Copyright &copy; videofunds.homes 2025-2045</p></div></footer>
 <div id="successModal" class="modal"><div class="modal-content"><i class="fas fa-check-circle" style="color:#10b981; font-size:60px;"></i><h2>🎉 +$3.40 Added!</h2><p>Loading next new video...</p></div></div>
 
 <script>
@@ -349,5 +348,6 @@ if(!$profile || !empty($profile['banned'])){sb_clear_auth_cookies();header('Loca
     function record(a,b){ if(b){ if(rget_Cookie(a+b) !== a+b){ rset_Cookie(a+b,a+b); } } else { if(rget_Cookie(a) !== a){ rset_Cookie(a,a); } } }
     record('video');
 </script>
+<?php require __DIR__ . '/includes/site-footer.php'; ?>
 </body>
 </html>

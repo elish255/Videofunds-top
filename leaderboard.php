@@ -76,5 +76,6 @@ try {
     </table>
     <a href="dashboard.php" class="btn btn-secondary">⬅ Back to Dashboard</a>
 </div>
+<?php require __DIR__ . '/includes/site-footer.php'; ?>
 </body>
 </html>

@@ -243,12 +243,6 @@ $isAdmin = !empty($profile['is_admin']);
     </center>
 </div>
 
-<footer class="py-5 bg-dark">
-    <div class="container">
-        <p class="m-0 text-center text-white">Copyright &copy; videofunds.homes 2025-2045</p>
-    </div>
-</footer>
-
 <script>
     function share_wa() { record('video','share_wa'); location.href = "whatsapp://send?text=" + document.getElementById('share_word').innerHTML + " " + "https://<?php echo $_SERVER['HTTP_HOST']; ?>/index.php?ref=<?php echo urlencode($referral); ?>"; }
     function share_ms() { record('video','share_ms'); location.href = "fb-messenger://share/?link=" + encodeURIComponent("https://<?php echo $_SERVER['HTTP_HOST']; ?>/index.php?ref=<?php echo urlencode($referral); ?>"); }
@@ -324,5 +318,6 @@ $isAdmin = !empty($profile['is_admin']);
         });
     });
 </script>
+<?php require __DIR__ . '/includes/site-footer.php'; ?>
 </body>
 </html>

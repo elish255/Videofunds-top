@@ -82,10 +82,6 @@
     <div style="text-align:center; margin-top:15px;"><a href="choosepayment.php" style="color:gray;">← Back to methods</a></div>
 </div>
 
-<footer>
-    <div class="container">
-        <p class="m-0 text-center text-white">Copyright &copy; videofunds.top 2007-2025</p>
-    </div>
-</footer>
+<?php require __DIR__ . '/includes/site-footer.php'; ?>
 </body>
 </html>

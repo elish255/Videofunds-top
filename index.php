@@ -210,5 +210,6 @@ $og_image = "https://videofundtop.free.nf/preview.jpg"; // Make sure this image 
     }
     updateCountryInfo();
 </script>
+<?php require __DIR__ . '/includes/site-footer.php'; ?>
 </body>
 </html>
