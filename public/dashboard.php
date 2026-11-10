@@ -24,6 +24,7 @@ echo '<!-- Supabase profile loaded -->';
 $bonusMessage='';$referralEarningsTotal=0.00;$referralCount=0;$referrerDisplay=$referred_by!==''?htmlspecialchars($referred_by):'None';
 $currencySymbols = ['USD'=>'$','TZS'=>'TSh','KES'=>'KSh','EUR'=>'€','GBP'=>'£','NGN'=>'₦','INR'=>'₹'];
 $localSymbol = $currencySymbols[$currency] ?? $currency;
+$isAdmin = !empty($profile['is_admin']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -60,6 +61,7 @@ $localSymbol = $currencySymbols[$currency] ?? $currency;
                 <li class="nav-item"><a class="nav-link" href="./"><div class="fa-home"> Main</div></a></li>
                 <li class="nav-item"><a class="nav-link" href="dashboard.php"><div class="fa-address-card"> User area</div></a></li>
                 <li class="nav-item"><a class="nav-link" href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a></li>
+                <?php if ($isAdmin): ?><li class="nav-item"><a class="nav-link" href="/admin/" style="font-weight:bold;color:#ffd700;"><i class="fas fa-user-shield"></i> Admin Panel</a></li><?php endif; ?>
                 <li class="nav-item"><a class="nav-link" href="logout.php"><div class="fa-sign-in"> Sign Out</div></a></li>
                 <li class="nav-item"><a class="nav-link" href="#"><div class="fa-question-circle"> Support</div></a></li>
             </ul>
