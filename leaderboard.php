@@ -1,7 +1,35 @@
 <?php
 require_once __DIR__.'/supabase.php';
-$leaderboard=[];
-try{$r=sb_request('GET','/rest/v1/vf_profiles?select=full_name,balance&order=balance.desc&limit=10');foreach($r['data'] as $u)$leaderboard[]=['name'=>$u['full_name']?:'Anonymous','balance'=>(float)$u['balance']];}catch(Throwable $e){error_log('Leaderboard: '.$e->getMessage());}
+
+$leaderboard = [];
+try {
+    // Use each user's saved local currency and USD exchange rate.
+    $r = sb_request(
+        'GET',
+        '/rest/v1/vf_profiles?select=full_name,balance,currency_code,exchange_rate&order=balance.desc&limit=10'
+    );
+
+    foreach (($r['data'] ?? []) as $u) {
+        $balance = (float)($u['balance'] ?? 0);
+        $rate = (float)($u['exchange_rate'] ?? 1);
+        if ($rate <= 0) $rate = 1;
+
+        $currency = strtoupper((string)($u['currency_code'] ?? 'USD'));
+        if ($currency === '') $currency = 'USD';
+
+        $symbol = ($currency === 'TZS') ? 'TSh' : $currency;
+
+        $leaderboard[] = [
+            'name' => !empty($u['full_name']) ? $u['full_name'] : 'Anonymous',
+            'balance' => $balance,
+            'local_balance' => $balance * $rate,
+            'currency' => $currency,
+            'symbol' => $symbol
+        ];
+    }
+} catch (Throwable $e) {
+    error_log('Leaderboard: '.$e->getMessage());
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -15,6 +43,8 @@ try{$r=sb_request('GET','/rest/v1/vf_profiles?select=full_name,balance&order=bal
         .container { max-width: 800px; margin-top: 50px; }
         .table th { background: #68162e; color: white; }
         h1 { color: #18610A; }
+        .local-balance { display:block; color:#18610A; font-weight:600; margin-top:3px; }
+        .usd-balance { font-weight:600; }
     </style>
 </head>
 <body>
@@ -22,7 +52,7 @@ try{$r=sb_request('GET','/rest/v1/vf_profiles?select=full_name,balance&order=bal
     <h1 class="text-center mb-4">🏆 Top Earners Leaderboard</h1>
     <table class="table table-bordered table-striped">
         <thead>
-            <tr><th>Rank</th><th>Full Name</th><th>Balance (USD)</th></tr>
+            <tr><th>Rank</th><th>Full Name</th><th>Balance (USD / Local)</th></tr>
         </thead>
         <tbody>
             <?php if (empty($leaderboard)): ?>
@@ -31,8 +61,14 @@ try{$r=sb_request('GET','/rest/v1/vf_profiles?select=full_name,balance&order=bal
                 <?php $rank = 1; foreach ($leaderboard as $user): ?>
                 <tr>
                     <td><?php echo $rank++; ?></td>
-                    <td><?php echo htmlspecialchars($user['name']); ?></td>
-                    <td>$<?php echo number_format($user['balance'], 2); ?></td>
+                    <td><?php echo htmlspecialchars($user['name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td>
+                        <span class="usd-balance">$<?php echo number_format($user['balance'], 2); ?></span>
+                        <span class="local-balance">
+                            <?php echo htmlspecialchars($user['symbol'], ENT_QUOTES, 'UTF-8'); ?>
+                            <?php echo number_format($user['local_balance'], 2); ?>
+                        </span>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
             <?php endif; ?>
