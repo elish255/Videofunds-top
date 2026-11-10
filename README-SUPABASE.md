@@ -5,7 +5,7 @@ This project is configured for a **new, empty Supabase project**. It does not im
 ## 1. Create the database
 1. Open the Supabase project SQL Editor.
 2. Run `supabase-schema.sql` once.
-3. In Authentication → Providers, enable Email. For immediate login after signup, disable email confirmation; otherwise users must confirm their email before signing in.
+3. In Authentication → Providers → Email, keep Email/Password enabled and turn OFF **Confirm email**. Users will still register and log in with email + password, but they will not need to verify their email. The registration handler also attempts an immediate password login if signup does not return a session.
 4. Create a normal user account through the site, then run this SQL using the exact admin email:
 
    ```sql
