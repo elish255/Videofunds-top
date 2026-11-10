@@ -11,9 +11,10 @@ $email = strtolower(trim($_POST['email'] ?? ''));
 $password = (string)($_POST['password'] ?? '');
 $confirm = (string)($_POST['confirm_password'] ?? '');
 $ref = trim($_POST['referral_code'] ?? '');
-$country = trim($_POST['country_code'] ?? 'TZ');
-$currency = trim($_POST['currency_code'] ?? 'USD');
-$rate = (float)($_POST['exchange_rate'] ?? 1);
+$geo = vf_detect_country_currency();
+$country = $geo['country_code'];
+$currency = $geo['currency_code'];
+$rate = vf_usd_exchange_rate($currency);
 
 if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) ||
     strlen($password) < 8 || $password !== $confirm) {

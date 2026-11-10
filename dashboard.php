@@ -8,6 +8,7 @@ if(!$profile){
   $profile=['id'=>$uid,'full_name'=>(string)($user['user_metadata']['full_name']??'User'),'email'=>$email,'balance'=>5.00,'referral_code'=>strtoupper(substr(bin2hex(random_bytes(5)),0,8)),'referred_by'=>null,'country_code'=>'TZ','currency_code'=>'USD','exchange_rate'=>1,'daily_watch_count'=>0,'last_watch_date'=>date('Y-m-d'),'activated'=>false,'banned'=>false];
   sb_request('POST','/rest/v1/vf_profiles',$profile,true,null,['Prefer: return=minimal']);
 }
+$profile = vf_sync_profile_currency($uid, $profile);
 if(!empty($profile['banned'])){sb_clear_auth_cookies();header('Location: /index.php?error=account_disabled');exit;}
 $fullname=$profile['full_name']?:($user['email']??'User');
 $balance=(float)($profile['balance']??5.00);

@@ -77,3 +77,116 @@ function sb_ensure_profile(array $user, array $fallback=[]): array {
 
 function sb_user_id(): string {$u=sb_require_user();return (string)$u['id'];}
 function sb_rpc(string $name,array $args): array {$r=sb_request('POST','/rest/v1/rpc/'.$name,$args,true,null,['Prefer: return=representation']);return $r['data'];}
+
+
+/**
+ * Detect visitor country using Vercel's trusted country header.
+ * Currency is then mapped from ISO country code. Exchange rates are USD base.
+ */
+function vf_country_currency_map(): array {
+    return [
+        'TZ'=>'TZS','KE'=>'KES','UG'=>'UGX','NG'=>'NGN','GH'=>'GHS','ZA'=>'ZAR',
+        'ZW'=>'USD','BW'=>'BWP','ZM'=>'ZMW','MW'=>'MWK','RW'=>'RWF','BI'=>'BIF',
+        'ET'=>'ETB','EG'=>'EGP','MA'=>'MAD','DZ'=>'DZD','TN'=>'TND','SN'=>'XOF',
+        'CI'=>'XOF','CM'=>'XAF','CD'=>'CDF','US'=>'USD','CA'=>'CAD','GB'=>'GBP',
+        'IE'=>'EUR','FR'=>'EUR','DE'=>'EUR','IT'=>'EUR','ES'=>'EUR','PT'=>'EUR',
+        'NL'=>'EUR','BE'=>'EUR','AT'=>'EUR','FI'=>'EUR','GR'=>'EUR','CY'=>'EUR',
+        'EE'=>'EUR','LV'=>'EUR','LT'=>'EUR','LU'=>'EUR','MT'=>'EUR','SK'=>'EUR',
+        'SI'=>'EUR','IN'=>'INR','PK'=>'PKR','BD'=>'BDT','PH'=>'PHP','ID'=>'IDR',
+        'MY'=>'MYR','SG'=>'SGD','AU'=>'AUD','NZ'=>'NZD','JP'=>'JPY','CN'=>'CNY',
+        'BR'=>'BRL','MX'=>'MXN','CH'=>'CHF','NO'=>'NOK','SE'=>'SEK','DK'=>'DKK',
+        'TR'=>'TRY','SA'=>'SAR','AE'=>'AED','QA'=>'QAR','KW'=>'KWD','OM'=>'OMR',
+        'BH'=>'BHD','IL'=>'ILS','TH'=>'THB','VN'=>'VND','KR'=>'KRW'
+    ];
+}
+
+function vf_detect_country_currency(): array {
+    $country = strtoupper(trim((string)($_SERVER['HTTP_X_VERCEL_IP_COUNTRY'] ?? $_SERVER['HTTP_CF_IPCOUNTRY'] ?? '')));
+    $map = vf_country_currency_map();
+
+    // Fallback for non-Vercel hosting: use the visitor IP, not the server IP.
+    if ($country === '' || $country === 'XX' || $country === 'T1') {
+        $forwarded = (string)($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '');
+        $ip = trim(explode(',', $forwarded)[0] ?? '');
+        if ($ip === '') $ip = (string)($_SERVER['HTTP_X_REAL_IP'] ?? '');
+        if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP)) {
+            $ch = curl_init('https://ipapi.co/'.rawurlencode($ip).'/json/');
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 5,
+                CURLOPT_CONNECTTIMEOUT => 3,
+                CURLOPT_HTTPHEADER => ['Accept: application/json']
+            ]);
+            $raw = curl_exec($ch);
+            curl_close($ch);
+            $geo = json_decode((string)$raw, true);
+            if (is_array($geo)) {
+                $country = strtoupper((string)($geo['country_code'] ?? ''));
+                if (!empty($geo['currency'])) $map[$country] = strtoupper((string)$geo['currency']);
+            }
+        }
+    }
+
+    $currency = $map[$country] ?? 'USD';
+    return ['country_code' => ($country !== '' ? $country : 'US'), 'currency_code' => $currency];
+}
+
+function vf_usd_exchange_rate(string $currency): float {
+    $currency = strtoupper(trim($currency));
+    if ($currency === '' || $currency === 'USD') return 1.0;
+
+    // Live USD-based rates. If the free endpoint is temporarily unavailable,
+    // use conservative fallback values rather than displaying a rate of 1.
+    $ch = curl_init('https://open.er-api.com/v6/latest/USD');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 7,
+        CURLOPT_CONNECTTIMEOUT => 4,
+        CURLOPT_HTTPHEADER => ['Accept: application/json']
+    ]);
+    $raw = curl_exec($ch);
+    curl_close($ch);
+    $fx = json_decode((string)$raw, true);
+    $rate = (float)($fx['rates'][$currency] ?? 0);
+    if (($fx['result'] ?? '') === 'success' && $rate > 0) return $rate;
+
+    $fallback = [
+        'TZS'=>2600, 'KES'=>130, 'UGX'=>3700, 'NGN'=>1500, 'GHS'=>15,
+        'ZAR'=>18.5, 'BWP'=>13.5, 'ZMW'=>27, 'MWK'=>1700, 'RWF'=>1300,
+        'BIF'=>2900, 'ETB'=>130, 'EGP'=>50, 'MAD'=>10, 'DZD'=>135,
+        'TND'=>3.1, 'XOF'=>600, 'XAF'=>600, 'CDF'=>2800, 'EUR'=>0.92,
+        'GBP'=>0.79, 'CAD'=>1.4, 'INR'=>83, 'PKR'=>280, 'BDT'=>120,
+        'PHP'=>57, 'IDR'=>16000, 'MYR'=>4.5, 'SGD'=>1.35, 'AUD'=>1.5,
+        'NZD'=>1.65, 'JPY'=>150, 'CNY'=>7.2, 'BRL'=>5.5, 'MXN'=>17,
+        'CHF'=>0.88, 'NOK'=>10.5, 'SEK'=>10.5, 'DKK'=>6.9, 'TRY'=>35,
+        'SAR'=>3.75, 'AED'=>3.6725, 'QAR'=>3.64, 'KWD'=>0.31, 'OMR'=>0.385,
+        'BHD'=>0.376, 'ILS'=>3.7, 'THB'=>36, 'VND'=>25000, 'KRW'=>1350
+    ];
+    return (float)($fallback[$currency] ?? 1.0);
+}
+
+function vf_sync_profile_currency(string $uid, array $profile): array {
+    $geo = vf_detect_country_currency();
+    $country = $geo['country_code'];
+    $currency = $geo['currency_code'];
+    $rate = vf_usd_exchange_rate($currency);
+
+    $oldCountry = strtoupper((string)($profile['country_code'] ?? ''));
+    $oldCurrency = strtoupper((string)($profile['currency_code'] ?? ''));
+    $oldRate = (float)($profile['exchange_rate'] ?? 0);
+
+    // Update existing users too, especially old profiles saved with USD/rate=1.
+    if ($oldCountry !== $country || $oldCurrency !== $currency ||
+        $oldRate <= 0 || abs($oldRate - $rate) > max(0.0001, $rate * 0.001)) {
+        sb_request('PATCH', '/rest/v1/vf_profiles?id=eq.'.rawurlencode($uid), [
+            'country_code' => $country,
+            'currency_code' => $currency,
+            'exchange_rate' => $rate,
+            'updated_at' => date('c')
+        ], true, null, ['Prefer: return=minimal']);
+        $profile['country_code'] = $country;
+        $profile['currency_code'] = $currency;
+        $profile['exchange_rate'] = $rate;
+    }
+    return $profile;
+}
