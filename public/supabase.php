@@ -36,5 +36,16 @@ function sb_current_user(): ?array {
 }
 function sb_require_user(): array {$u=sb_current_user();if(!$u){header('Location: /index.php');exit;}return $u;}
 function sb_profile(string $uid): array {$r=sb_request('GET','/rest/v1/vf_profiles?select=*&id=eq.'.rawurlencode($uid).'&limit=1');return $r['data'][0]??[];}
+function sb_ensure_profile(array $user, array $fallback=[]): array {
+    $uid=(string)($user['id']??'');
+    if($uid==='') throw new RuntimeException('Authenticated user ID is missing.');
+    $existing=sb_profile($uid);
+    if($existing) return $existing;
+    $email=(string)($user['email']??($fallback['email']??''));
+    $name=trim((string)($user['user_metadata']['full_name']??($fallback['full_name']??'')));
+    $profile=['id'=>$uid,'full_name'=>$name,'email'=>$email,'balance'=>5.00,'referral_code'=>strtoupper(substr(bin2hex(random_bytes(5)),0,8)),'referred_by'=>($fallback['referred_by']??null),'country_code'=>($fallback['country_code']??'TZ'),'currency_code'=>($fallback['currency_code']??'USD'),'exchange_rate'=>(float)($fallback['exchange_rate']??1),'daily_watch_count'=>0,'last_watch_date'=>date('Y-m-d')];
+    sb_request('POST','/rest/v1/vf_profiles',$profile,true,null,['Prefer: resolution=ignore-duplicates,return=representation']);
+    return sb_profile($uid);
+}
 function sb_user_id(): string {$u=sb_require_user();return (string)$u['id'];}
 function sb_rpc(string $name,array $args): array {$r=sb_request('POST','/rest/v1/rpc/'.$name,$args,true,null,['Prefer: return=representation']);return $r['data'];}
