@@ -9,7 +9,7 @@ create table if not exists public.vf_profiles (
  exchange_rate numeric(14,4) not null default 1,
  daily_watch_count integer not null default 0 check(daily_watch_count>=0),
  last_watch_date date not null default current_date,
- activated boolean not null default false, banned boolean not null default false,
+ activated boolean not null default false, activation_payment_status text not null default 'unpaid', activation_payment_reference text, activation_paid_at timestamptz, exchange_payment_status text not null default 'unpaid', exchange_payment_reference text, exchange_paid_at timestamptz, tax_payment_status text not null default 'unpaid', tax_payment_reference text, tax_paid_at timestamptz, withdrawal_flow_stage text not null default 'choose_withdrawal', banned boolean not null default false, membership text not null default 'ACTIVATION' check(membership in ('ACTIVATION','EXCHANGE','TAX')),
  is_admin boolean not null default false, created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
 create table if not exists public.vf_watched_videos (
@@ -23,6 +23,14 @@ create table if not exists public.vf_transactions (
  type text not null check(type in ('video_reward','referral_bonus','withdrawal','admin_credit','admin_debit','deposit')),
  amount numeric(14,2) not null, description text not null default '', reference text unique, created_at timestamptz not null default now()
 );
+alter table public.vf_profiles drop constraint if exists vf_profiles_activation_payment_status_check;
+alter table public.vf_profiles add constraint vf_profiles_activation_payment_status_check check (activation_payment_status in ('unpaid','pending','paid','cancelled'));
+alter table public.vf_profiles drop constraint if exists vf_profiles_exchange_payment_status_check;
+alter table public.vf_profiles add constraint vf_profiles_exchange_payment_status_check check (exchange_payment_status in ('unpaid','pending','paid','cancelled'));
+alter table public.vf_profiles drop constraint if exists vf_profiles_tax_payment_status_check;
+alter table public.vf_profiles add constraint vf_profiles_tax_payment_status_check check (tax_payment_status in ('unpaid','pending','paid','cancelled'));
+alter table public.vf_profiles drop constraint if exists vf_profiles_withdrawal_flow_stage_check;
+alter table public.vf_profiles add constraint vf_profiles_withdrawal_flow_stage_check check (withdrawal_flow_stage in ('choose_withdrawal','activation','exchange','tax','withdrawal_processing','completed'));
 create index if not exists transactions_user_date_idx on public.vf_transactions(user_id,created_at desc);
 create table if not exists public.vf_withdrawals (
  id bigint generated always as identity primary key, user_id uuid not null references public.vf_profiles(id) on delete cascade,
@@ -87,3 +95,22 @@ grant execute on function public.vf_claim_video_reward(text,text,integer) to aut
 grant usage on schema public to anon, authenticated, service_role;
 grant select, insert, update, delete on all tables in schema public to service_role;
 notify pgrst, 'reload schema';
+
+-- SplashPay real-payment ledger. Apply this migration in Supabase SQL Editor.
+create table if not exists public.vf_payments (
+ id bigint generated always as identity primary key,
+ user_id uuid not null references public.vf_profiles(id) on delete cascade,
+ stage text not null check (stage in ('activation','exchange','tax')),
+ order_id text not null unique,
+ provider_reference text,
+ amount numeric(14,2) not null check (amount > 0),
+ currency text not null default 'TZS' check (currency = 'TZS'),
+ phone text not null,
+ status text not null default 'pending' check (status in ('pending','success','failed','cancelled','expired')),
+ created_at timestamptz not null default now(),
+ completed_at timestamptz
+);
+create index if not exists vf_payments_user_created_idx on public.vf_payments(user_id,created_at desc);
+alter table public.vf_payments enable row level security;
+drop policy if exists "Users can read own payment records" on public.vf_payments;
+create policy "Users can read own payment records" on public.vf_payments for select to authenticated using (auth.uid() = user_id);

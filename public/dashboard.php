@@ -137,8 +137,6 @@ $isAdmin = !empty($profile['is_admin']);
         </article>
     <?php endforeach; ?>
 </section>
-<?php else: ?>
-<section class="container vf-notifications"><div class="vf-empty-notifications"><i class="fa fa-bell" aria-hidden="true"></i> Huna notification mpya kwa sasa.</div></section>
 <?php endif; ?>
 
 <header class="py-1 mb-1 mt-3">
@@ -309,7 +307,7 @@ $isAdmin = !empty($profile['is_admin']);
                 card.remove();
                 if (!document.querySelector('.vf-notification')) {
                     const section = document.querySelector('.vf-notifications');
-                    section.innerHTML = '<div class="vf-empty-notifications"><i class="fa fa-bell" aria-hidden="true"></i> Huna notification mpya kwa sasa.</div>';
+                    if (section) section.remove();
                 }
             } catch (error) {
                 alert(error.message);

@@ -1,9 +1,12 @@
 <?php
-require_once __DIR__.'/supabase.php';
+require_once __DIR__.'/flow_common.php';
 $user=sb_require_user();
 $uid=(string)$user['id'];
 $profile=sb_profile($uid);
 $balance=(float)($profile['balance']??5.00);
+if($balance < 200){ header('Location: dashboard.php?withdraw_error=minimum_balance'); exit; }
+if((string)($profile['activation_payment_status']??'')==='paid' || !empty($profile['activated'])) { vf_flow_redirect_for_profile($profile); }
+vf_flow_update($uid,['withdrawal_flow_stage'=>'choose_withdrawal']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
