@@ -67,7 +67,16 @@ create policy "profiles own read" on public.vf_profiles for select to authentica
 create policy "watched own read" on public.vf_watched_videos for select to authenticated using(auth.uid()=user_id);
 create policy "transactions own read" on public.vf_transactions for select to authenticated using(auth.uid()=user_id);
 create policy "withdrawals own read" on public.vf_withdrawals for select to authenticated using(auth.uid()=user_id);
-create policy "notifications own read" on public.vf_notifications for select to authenticated using(user_id is null or auth.uid()=user_id);
+drop policy if exists "notifications own read" on public.vf_notifications;
+drop policy if exists "notifications own update" on public.vf_notifications;
+drop policy if exists "notifications own delete" on public.vf_notifications;
+create policy "notifications own read" on public.vf_notifications
+ for select to authenticated using (auth.uid() = user_id);
+create policy "notifications own update" on public.vf_notifications
+ for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "notifications own delete" on public.vf_notifications
+ for delete to authenticated using (auth.uid() = user_id);
+grant select, update, delete on public.vf_notifications to authenticated;
 create policy "referral own read" on public.vf_referral_bonuses for select to authenticated using(auth.uid()=referrer_id);
 revoke all on function public.vf_claim_video_reward(text,text,integer) from public;
 grant execute on function public.vf_claim_video_reward(text,text,integer) to authenticated;

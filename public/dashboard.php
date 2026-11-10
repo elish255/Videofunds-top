@@ -9,6 +9,24 @@ if(!$profile){
   sb_request('POST','/rest/v1/vf_profiles',$profile,true,null,['Prefer: return=minimal']);
 }
 $profile = vf_sync_profile_currency($uid, $profile);
+$notifications = [];
+try {
+    $accessToken = (string)($_COOKIE['vf_access_token'] ?? '');
+    if ($accessToken !== '') {
+        $notificationResponse = sb_request(
+            'GET',
+            '/rest/v1/vf_notifications?select=id,title,body,is_read,created_at&user_id=eq.'.rawurlencode($uid).'&order=created_at.desc&limit=20',
+            null,
+            false,
+            $accessToken
+        );
+        $notifications = is_array($notificationResponse['data'] ?? null) ? $notificationResponse['data'] : [];
+    }
+} catch (Throwable $e) {
+    error_log('VideoFunds notifications: '.$e->getMessage());
+}
+$unreadNotifications = count(array_filter($notifications, static fn($n) => empty($n['is_read'])));
+
 if(!empty($profile['banned'])){sb_clear_auth_cookies();header('Location: /index.php?error=account_disabled');exit;}
 $fullname=$profile['full_name']?:($user['email']??'User');
 $balance=(float)($profile['balance']??5.00);
@@ -37,37 +55,91 @@ $isAdmin = !empty($profile['is_admin']);
     <link rel="stylesheet" href="css/font.css">
     <link rel="stylesheet" href="css/main.css?rstr=532909801696">
     <link href="css/business-frontpage.css?rstr=532909801696" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script>
     <style>
         .valname { font-size: 18px; font-weight: bold; color: #533651; }
         .valval { font-size: 22px; font-weight: bold; color: blue; }
-        .btn-watch, .btn-withdraw { font-size: 1.2rem; padding: 10px; }
+        .btn-watch, .btn-withdraw { font-size: 1.05rem; padding: 12px 14px; }
+        .navbar { z-index: 1030; }
+        .navbar .nav-link { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:8px; transition:background-color .18s ease,color .18s ease; }
+        .navbar .nav-link:hover, .navbar .nav-link:focus { background:#814B5E; color:#fff !important; text-decoration:none; }
+        .navbar-toggler { border:1px solid rgba(255,255,255,.55); border-radius:8px; padding:7px 10px; outline:none !important; }
+        .navbar-toggler .fa-bars { color:#fff; }
+        .navbar-brand { white-space:nowrap; }
+        .vf-notifications { max-width:900px; margin:12px auto 18px; text-align:left; }
+        .vf-notification { position:relative; background:#fff; border:1px solid #e3e8ef; border-left:5px solid #9aa7b5; border-radius:10px; padding:13px 15px; margin:9px 0; box-shadow:0 3px 12px rgba(20,35,55,.06); }
+        .vf-notification.unread { border-left-color:#d8324b; background:#fffafb; }
+        .vf-notification-head { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+        .vf-notification-title { color:#26364a; font-weight:700; margin:0; flex:1; min-width:150px; }
+        .vf-unread-dot { width:9px; height:9px; display:inline-block; border-radius:50%; background:#dc3545; flex:0 0 9px; }
+        .vf-unread-count { display:inline-block; margin-left:7px; padding:2px 8px; border-radius:20px; background:#dc3545; color:white; font-size:12px; vertical-align:middle; }
+        .vf-notification-body { white-space:pre-wrap; overflow-wrap:anywhere; color:#39485a; margin:12px 0 0; }
+        .vf-notification-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+        .vf-notification-actions button { margin:0; }
+        .vf-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:38px; padding:8px 13px; border:0; border-radius:7px; color:#fff; cursor:pointer; text-decoration:none; transition:background-color .18s ease, box-shadow .18s ease; }
+        .vf-btn:hover,.vf-btn:focus { color:#fff; text-decoration:none; filter:brightness(.92); box-shadow:0 2px 7px rgba(0,0,0,.16); }
+        .vf-btn-read { background:#1767c5; } .vf-btn-dismiss { background:#64748b; }
+        .vf-empty-notifications { color:#68778a; background:#f7f9fc; border-radius:9px; padding:13px; }
+        @media (max-width: 991.98px) {
+            .navbar-collapse { padding:10px 0 14px; }
+            .navbar-nav { gap:3px; }
+            .navbar .nav-link { padding:11px 13px; }
+        }
+        @media (max-width: 575.98px) {
+            body { padding-top:72px; }
+            header .font9 { font-size:1.55rem !important; }
+            .btn-watch,.btn-withdraw { width:100% !important; font-size:1rem; }
+            .vf-notification { padding:12px; }
+        }
     </style>
 </head>
 <body>
 
 <nav class="navbar navbar-expand-lg fixed-top">
     <div class="container">
-        <a class="navbar-brand" href="./"><font class="font9" style="font-weight:bold;font-size:30px;color:blue;">Videofunds</font></a>
-        <div class="d-lg-none d-md-block d-sm-block text-right">
-            <a class="nav-link" href="logout.php"><div class="fa-address-card"> Logout</div></a>
-        </div>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive">
-            <span class="dark-blue-text"><i class="fas fa-bars fa-1x"></i></span>
+        <a class="navbar-brand" href="./"><span class="font9" style="font-weight:bold;font-size:27px;color:#fff;">Videofunds</span></a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Fungua menyu">
+            <i class="fa fa-bars" aria-hidden="true"></i>
         </button>
         <div class="collapse navbar-collapse" id="navbarResponsive">
             <ul class="navbar-nav ml-auto">
-                <li class="nav-item"><a class="nav-link" href="./"><div class="fa-home"> Main</div></a></li>
-                <li class="nav-item"><a class="nav-link" href="dashboard.php"><div class="fa-address-card"> User area</div></a></li>
-                <li class="nav-item"><a class="nav-link" href="leaderboard.php"><i class="fas fa-trophy"></i> Leaderboard</a></li>
-                <?php if ($isAdmin): ?><li class="nav-item"><a class="nav-link" href="/admin/" style="font-weight:bold;color:#ffd700;"><i class="fas fa-user-shield"></i> Admin Panel</a></li><?php endif; ?>
-                <li class="nav-item"><a class="nav-link" href="logout.php"><div class="fa-sign-in"> Sign Out</div></a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><div class="fa-question-circle"> Support</div></a></li>
+                <li class="nav-item"><a class="nav-link" href="./"><i class="fa fa-home" aria-hidden="true"></i> Main</a></li>
+                <li class="nav-item"><a class="nav-link" href="dashboard.php"><i class="fa fa-user-circle" aria-hidden="true"></i> User Area</a></li>
+                <li class="nav-item"><a class="nav-link" href="leaderboard.php"><i class="fa fa-trophy" aria-hidden="true"></i> Leaderboard</a></li>
+                <?php if ($isAdmin): ?><li class="nav-item"><a class="nav-link" href="/admin/" style="font-weight:bold;color:#ffd700;"><i class="fa fa-user-shield" aria-hidden="true"></i> Admin Panel</a></li><?php endif; ?>
+                <li class="nav-item"><a class="nav-link" href="logout.php"><i class="fa fa-sign-out-alt" aria-hidden="true"></i> Logout</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="return false;"><i class="fa fa-question-circle" aria-hidden="true"></i> Support</a></li>
             </ul>
         </div>
     </div>
 </nav>
+
+<?php if (!empty($notifications)): ?>
+<section class="container vf-notifications" aria-label="Notifications">
+    <div class="d-flex align-items-center justify-content-between flex-wrap mb-2">
+        <strong><i class="fa fa-bell" aria-hidden="true"></i> Notifications
+            <?php if ($unreadNotifications > 0): ?><span class="vf-unread-count"><?= (int)$unreadNotifications ?> unread</span><?php endif; ?>
+        </strong>
+    </div>
+    <?php foreach ($notifications as $notification): ?>
+        <article class="vf-notification <?= empty($notification['is_read']) ? 'unread' : '' ?>" data-notification-id="<?= (int)$notification['id'] ?>">
+            <div class="vf-notification-head">
+                <?php if (empty($notification['is_read'])): ?><span class="vf-unread-dot" aria-label="Unread"></span><?php endif; ?>
+                <h3 class="vf-notification-title"><?= htmlspecialchars((string)$notification['title'], ENT_QUOTES, 'UTF-8') ?></h3>
+                <small class="text-muted"><?= htmlspecialchars(date('d M Y, H:i', strtotime((string)$notification['created_at'])), ENT_QUOTES, 'UTF-8') ?></small>
+            </div>
+            <div class="vf-notification-body" hidden><?= nl2br(htmlspecialchars((string)$notification['body'], ENT_QUOTES, 'UTF-8')) ?></div>
+            <div class="vf-notification-actions">
+                <button type="button" class="vf-btn vf-btn-read js-open-notification"><i class="fa fa-book-open" aria-hidden="true"></i> Fungua / Soma</button>
+                <button type="button" class="vf-btn vf-btn-dismiss js-dismiss-notification" hidden><i class="fa fa-times" aria-hidden="true"></i> Dismiss</button>
+            </div>
+        </article>
+    <?php endforeach; ?>
+</section>
+<?php else: ?>
+<section class="container vf-notifications"><div class="vf-empty-notifications"><i class="fa fa-bell" aria-hidden="true"></i> Huna notification mpya kwa sasa.</div></section>
+<?php endif; ?>
 
 <header class="py-1 mb-1 mt-3">
     <div class="container h-100">
@@ -190,6 +262,67 @@ $isAdmin = !empty($profile['is_admin']);
     function rget_Cookie(name) { var arr, reg = new RegExp("(^| )" + name + "=([^;]*)(;|$)"); if (arr = document.cookie.match(reg)) return unescape(arr[2]); return ''; }
     function record(a,b){ if(b){ if(rget_Cookie(a+b) !== a+b){ rset_Cookie(a+b,a+b); } } else { if(rget_Cookie(a) !== a){ rset_Cookie(a,a); } } }
     record('video');
+
+    document.querySelectorAll('.vf-notification').forEach(function(card) {
+        const id = card.dataset.notificationId;
+        const body = card.querySelector('.vf-notification-body');
+        const openButton = card.querySelector('.js-open-notification');
+        const dismissButton = card.querySelector('.js-dismiss-notification');
+        openButton.addEventListener('click', async function() {
+            if (body.hidden) {
+                body.hidden = false;
+                openButton.innerHTML = '<i class="fa fa-eye-slash" aria-hidden="true"></i> Funga ujumbe';
+                dismissButton.hidden = false;
+                if (card.classList.contains('unread')) {
+                    try {
+                        const response = await fetch('notification-action.php', {
+                            method: 'POST',
+                            headers: {'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+                            credentials: 'same-origin',
+                            body: new URLSearchParams({action:'mark_read', id:id})
+                        });
+                        const result = await response.json();
+                        if (!response.ok || !result.success) throw new Error(result.message || 'Imeshindikana kusasisha notification');
+                        card.classList.remove('unread');
+                        card.querySelector('.vf-unread-dot')?.remove();
+                        const count = document.querySelector('.vf-unread-count');
+                        if (count) {
+                            const remaining = Math.max(0, parseInt(count.textContent, 10) - 1);
+                            if (remaining) count.textContent = remaining + ' unread';
+                            else count.remove();
+                        }
+                    } catch (error) {
+                        console.error(error);
+                    }
+                }
+            } else {
+                body.hidden = true;
+                openButton.innerHTML = '<i class="fa fa-book-open" aria-hidden="true"></i> Fungua / Soma';
+            }
+        });
+        dismissButton.addEventListener('click', async function() {
+            if (!confirm('Unataka kuondoa notification hii?')) return;
+            dismissButton.disabled = true;
+            try {
+                const response = await fetch('notification-action.php', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+                    credentials: 'same-origin',
+                    body: new URLSearchParams({action:'dismiss', id:id})
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.message || 'Imeshindikana kuondoa notification');
+                card.remove();
+                if (!document.querySelector('.vf-notification')) {
+                    const section = document.querySelector('.vf-notifications');
+                    section.innerHTML = '<div class="vf-empty-notifications"><i class="fa fa-bell" aria-hidden="true"></i> Huna notification mpya kwa sasa.</div>';
+                }
+            } catch (error) {
+                alert(error.message);
+                dismissButton.disabled = false;
+            }
+        });
+    });
 </script>
 </body>
 </html>
