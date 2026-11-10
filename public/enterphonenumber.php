@@ -91,11 +91,6 @@ $balance=(float)($profile['balance']??5.00);
     <div style="text-align:center; margin-top:15px;"><a href="choosepayment.php" style="color:gray;">← Back to methods</a></div>
 </div>
 
-<footer>
-    <div class="container">
-        <p class="m-0 text-center text-white">Copyright &copy; videofunds.top 2025-2045</p>
-    </div>
-</footer>
 <script>
     const userBalance = <?php echo $balance; ?>;
     const minWithdrawal = 200.00;
@@ -140,5 +135,6 @@ $balance=(float)($profile['balance']??5.00);
         document.getElementById('phoneError').style.display = 'none';
     });
 </script>
+<?php require __DIR__ . '/includes/site-footer.php'; ?>
 </body>
 </html>

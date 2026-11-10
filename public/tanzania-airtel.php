@@ -273,6 +273,7 @@ setInterval(showNotification, 8000);
     I have Payed Please Confirm 
   </a>
 
+<?php require __DIR__ . '/includes/site-footer.php'; ?>
 </body>
 </html>
 

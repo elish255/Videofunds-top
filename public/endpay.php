@@ -277,12 +277,6 @@
 
   <br>
   
-  <footer class="py-5 bg-dark">
-    <div class="container">
-      <p class="m-0 text-center text-white">Copyright &copy; videofunds.top 2007-2025</p>
-    </div>
-  </footer>
-
   <!-- Email Us Button -->
   <a href="mailto:officialvideofunds@gmail.com?subject=Support%20Request" class="email-button">
     Email Us
@@ -438,5 +432,6 @@
       taxPaymentButton.addEventListener('click', startPaymentProcess);
     }
   </script>
+<?php require __DIR__ . '/includes/site-footer.php'; ?>
 </body>
 </html>
