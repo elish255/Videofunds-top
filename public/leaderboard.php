@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__.'/supabase.php';
 $leaderboard=[];
-try{$r=sb_request('GET','/rest/v1/profiles?select=full_name,balance&order=balance.desc&limit=10');foreach($r['data'] as $u)$leaderboard[]=['name'=>$u['full_name']?:'Anonymous','balance'=>(float)$u['balance']];}catch(Throwable $e){error_log('Leaderboard: '.$e->getMessage());}
+try{$r=sb_request('GET','/rest/v1/vf_profiles?select=full_name,balance&order=balance.desc&limit=10');foreach($r['data'] as $u)$leaderboard[]=['name'=>$u['full_name']?:'Anonymous','balance'=>(float)$u['balance']];}catch(Throwable $e){error_log('Leaderboard: '.$e->getMessage());}
 ?>
 <!DOCTYPE html>
 <html lang="en">
