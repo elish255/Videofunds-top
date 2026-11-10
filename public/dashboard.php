@@ -21,6 +21,7 @@ $remainingToday=max(0,50-$displayDaily);
 $activated=(bool)($profile['activated']??false);
 echo '<!-- Supabase profile loaded -->';
 $bonusMessage='';$referralEarningsTotal=0.00;$referralCount=0;$referrerDisplay=$referred_by!==''?htmlspecialchars($referred_by):'None';
+$deviceRegistrationScript = '<script>try{localStorage.setItem("videofunds_registered_device","true");}catch(e){}</script>';
 $currencySymbols = ['USD'=>'$','TZS'=>'TSh','KES'=>'KSh','EUR'=>'€','GBP'=>'£','NGN'=>'₦','INR'=>'₹'];
 $localSymbol = $currencySymbols[$currency] ?? $currency;
 ?>
@@ -44,6 +45,7 @@ $localSymbol = $currencySymbols[$currency] ?? $currency;
     </style>
 </head>
 <body>
+<?php echo $deviceRegistrationScript; ?>
 
 <nav class="navbar navbar-expand-lg fixed-top">
     <div class="container">
