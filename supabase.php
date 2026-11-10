@@ -31,6 +31,6 @@ function sb_current_user(): ?array {
         sb_clear_auth_cookies();return $user=null;}
 }
 function sb_require_user(): array {$u=sb_current_user();if(!$u){header('Location: /index.php');exit;}return $u;}
-function sb_profile(string $uid): array {$r=sb_request('GET','/rest/v1/profiles?select=*&id=eq.'.rawurlencode($uid).'&limit=1');return $r['data'][0]??[];}
+function sb_profile(string $uid): array {$r=sb_request('GET','/rest/v1/vf_profiles?select=*&id=eq.'.rawurlencode($uid).'&limit=1');return $r['data'][0]??[];}
 function sb_user_id(): string {$u=sb_require_user();return (string)$u['id'];}
 function sb_rpc(string $name,array $args): array {$r=sb_request('POST','/rest/v1/rpc/'.$name,$args,true,null,['Prefer: return=representation']);return $r['data'];}
