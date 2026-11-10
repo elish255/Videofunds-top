@@ -73,3 +73,8 @@ revoke all on function public.vf_claim_video_reward(text,text,integer) from publ
 grant execute on function public.vf_claim_video_reward(text,text,integer) to authenticated;
 -- Promote an administrator manually after signup:
 -- update public.vf_profiles set is_admin=true where email='YOUR_ADMIN_EMAIL';
+
+-- Make the new tables visible to PostgREST immediately after running this script.
+grant usage on schema public to anon, authenticated, service_role;
+grant select, insert, update, delete on all tables in schema public to service_role;
+notify pgrst, 'reload schema';
