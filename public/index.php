@@ -170,18 +170,11 @@ $og_image = "https://videofundtop.free.nf/preview.jpg"; // Make sure this image 
         }
     });
 
-    // One registration per device
+    // Keep the device reminder informational only. Registration success is decided by Supabase,
+    // so a failed attempt or a reset database must not permanently block this browser.
     const registerFormElem = document.getElementById('registerFormElement');
-    if (registerFormElem) {
-        registerFormElem.addEventListener('submit', function(e) {
-            if (localStorage.getItem('videofunds_registered_device') === 'true') {
-                e.preventDefault();
-                alert('⚠️ You have already registered an account on this device.\n\nYou can only create one account per device.\nPlease login with your existing account.');
-                document.querySelector('.tab[data-tab="login"]').click();
-                return false;
-            }
-            localStorage.setItem('videofunds_registered_device', 'true');
-        });
+    if (registerFormElem && new URLSearchParams(window.location.search).get('registered') === '1') {
+        localStorage.setItem('videofunds_registered_device', 'true');
     }
 
     // Country info

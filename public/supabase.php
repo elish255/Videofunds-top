@@ -17,10 +17,14 @@ function sb_request(string $method, string $path, ?array $payload=null, bool $se
 }
 function sb_auth(string $path,array $payload): array { return sb_request('POST','/auth/v1/'.$path,$payload,false,null); }
 function sb_set_auth_cookies(array $auth): void {
-    $secure=(!empty($_SERVER['HTTPS'])&&$_SERVER['HTTPS']!=='off')||($_SERVER['HTTP_X_FORWARDED_PROTO']??'')==='https';
+    $forwardedProto=strtolower(trim(explode(',',(string)($_SERVER['HTTP_X_FORWARDED_PROTO']??''))[0]));
+    $secure=(!empty($_SERVER['HTTPS'])&&$_SERVER['HTTPS']!=='off')||$forwardedProto==='https'||str_ends_with((string)($_SERVER['HTTP_HOST']??''),'.vercel.app');
     $opts=['expires'=>time()+(int)($auth['expires_in']??3600),'path'=>'/','secure'=>$secure,'httponly'=>true,'samesite'=>'Lax'];
-    setcookie('vf_access_token',(string)$auth['access_token'],$opts);
-    $opts['expires']=time()+60*60*24*30;setcookie('vf_refresh_token',(string)($auth['refresh_token']??''),$opts);
+    if (!empty($auth['access_token'])) setcookie('vf_access_token',(string)$auth['access_token'],$opts);
+    if (!empty($auth['refresh_token'])) {
+        $opts['expires']=time()+60*60*24*30;
+        setcookie('vf_refresh_token',(string)$auth['refresh_token'],$opts);
+    }
 }
 function sb_clear_auth_cookies(): void { foreach(['vf_access_token','vf_refresh_token'] as $n)setcookie($n,'',['expires'=>1,'path'=>'/','httponly'=>true,'samesite'=>'Lax']); }
 function sb_current_user(): ?array {
