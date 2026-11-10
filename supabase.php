@@ -15,7 +15,12 @@ function sb_request(string $method, string $path, ?array $payload=null, bool $se
     if($code>=400) throw new RuntimeException((string)($data['msg']??$data['message']??$data['error_description']??$data['error']??'Supabase request failed ('.$code.')'));
     return ['status'=>$code,'data'=>$data??[],'raw'=>$raw];
 }
-function sb_auth(string $path,array $payload): array { return sb_request('POST','/auth/v1/'.$path,$payload,false,null); }
+function sb_auth(string $path,array $payload): array {
+    // sb_request() wraps every response as ['status'=>..., 'data'=>..., 'raw'=>...].
+    // Auth callers need the actual Supabase Auth payload (access_token, user, etc.).
+    $response = sb_request('POST', '/auth/v1/'.$path, $payload, false, null);
+    return is_array($response['data'] ?? null) ? $response['data'] : [];
+}
 function sb_set_auth_cookies(array $auth): void {
     $secure=(!empty($_SERVER['HTTPS'])&&$_SERVER['HTTPS']!=='off')||($_SERVER['HTTP_X_FORWARDED_PROTO']??'')==='https';
     $opts=['expires'=>time()+(int)($auth['expires_in']??3600),'path'=>'/','secure'=>$secure,'httponly'=>true,'samesite'=>'Lax'];
