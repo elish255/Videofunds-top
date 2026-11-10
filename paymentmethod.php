@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__.'/flow_common.php';
-$user=sb_require_user();$profile=sb_profile((string)$user['id']);vf_demo_require_balance($profile);
+$user=sb_require_user();$profile=sb_profile((string)$user['id']);
 $stage=$_GET['stage']??'activation';if(!in_array($stage,['activation','exchange','tax'],true))$stage='activation';
 $amount=['activation'=>35500,'exchange'=>40820,'tax'=>62500][$stage];
 if(($profile[$stage.'_payment_status']??'')==='paid'){vf_flow_redirect_for_profile($profile);}

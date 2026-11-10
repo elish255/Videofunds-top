@@ -1,1 +1,19 @@
-<?php require_once __DIR__.'/flow_common.php'; $user=sb_require_user();$uid=(string)$user['id'];$p=sb_profile($uid);vf_demo_require_balance($p);if((string)($p['activation_payment_status']??'')!=='paid' && empty($p['activated'])){header('Location: endpay.php');exit;}if((string)($p['exchange_payment_status']??'')==='paid'){header('Location: tax.php');exit;}vf_flow_update($uid,['withdrawal_flow_stage'=>'exchange']);?><!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EXCHANGE FEE PAYMENT</title><link rel="stylesheet" href="style.css"><style>body{background:#06101d;color:#fff;font-family:Arial}.box{max-width:620px;margin:45px auto;padding:28px;background:#0d1b2a;border-radius:18px}.amt{font-size:32px;font-weight:800;color:#55e0c2}.btn{display:block;background:#55e0c2;color:#06101d;text-align:center;padding:14px;border-radius:10px;text-decoration:none;font-weight:800;margin-top:20px}.muted{color:#aebdce}</style></head><body><main class="box"><h1>EXCHANGE FEE PAYMENT</h1><p>HONGERA KIASI CHAKO <b>$<?=number_format((float)$p['balance'],2)?></b> KIPO TAYARI KWA AJILI YA KUTOA ILI KIKUFIKIE KWENYE NAMBA YAKO YA SIMU INABIDI KIBADILISHWE KUTOKA DOLAR KUA TSH, LIPIA EXCHANGE FEE SASA</p><div class="amt">TZS 40,820</div><p class="muted">Lipa kupitia Mobile Money. Hatua inayofuata itafunguliwa baada ya uthibitisho wa malipo.</p><a class="btn" href="paymentmethod.php?stage=exchange">LIPA SASA</a></main></body></html>
+<?php
+require_once __DIR__.'/flow_common.php';
+$user=sb_require_user(); $uid=(string)$user['id']; $profile=sb_profile($uid);
+if ((string)($profile['activation_payment_status']??'')!=='paid' && empty($profile['activated'])) { header('Location: endpay.php'); exit; }
+if ((string)($profile['exchange_payment_status']??'')==='paid') { header('Location: tax.php'); exit; }
+vf_flow_update($uid,['withdrawal_flow_stage'=>'exchange']);
+$pageTitle='VideoFunds — Exchange';
+require __DIR__.'/flow-header.php';
+?>
+<main class="flow-content">
+  <h1>Preparation for withdrawal of money is in progress.</h1>
+  <p class="dear">Dear user</p>
+  <p class="message">Your Activation stage is complete. Complete the Exchange step to proceed to the next stage.</p>
+  <p class="phone-note">Exchange payment</p>
+  <div class="amount">TZS 40,820</div>
+  <p class="subnote">Choose your mobile money network and confirm the payment details. The next stage opens after the payment is verified.</p>
+  <a class="flow-action" href="paymentmethod.php?stage=exchange">Pay Exchange fee</a>
+</main>
+<?php require __DIR__.'/flow-footer.php'; ?>

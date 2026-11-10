@@ -27,9 +27,4 @@ function vf_flow_redirect_for_profile(array $profile): void {
     }
 }
 
-function vf_demo_require_balance(array $profile): void {
-    if ((float)($profile['balance'] ?? 0) < 200) {
-        header('Location: dashboard.php?withdraw_error=minimum_balance'); exit;
-    }
-}
 ?>

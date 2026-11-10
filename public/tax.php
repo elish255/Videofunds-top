@@ -1,1 +1,20 @@
-<?php require_once __DIR__.'/flow_common.php'; $user=sb_require_user();$uid=(string)$user['id'];$p=sb_profile($uid);vf_demo_require_balance($p);if((string)($p['activation_payment_status']??'')!=='paid'){header('Location: endpay.php');exit;}if((string)($p['exchange_payment_status']??'')!=='paid'){header('Location: exchange.php');exit;}if((string)($p['tax_payment_status']??'')==='paid'){header('Location: withdrawal-processing.php');exit;}vf_flow_update($uid,['withdrawal_flow_stage'=>'tax']);?><!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TAX FEE PAYMENT</title><link rel="stylesheet" href="style.css"><style>body{background:#06101d;color:#fff;font-family:Arial}.box{max-width:620px;margin:45px auto;padding:28px;background:#0d1b2a;border-radius:18px}.amt{font-size:32px;font-weight:800;color:#55e0c2}.btn{display:block;background:#55e0c2;color:#06101d;text-align:center;padding:14px;border-radius:10px;text-decoration:none;font-weight:800;margin-top:20px}.muted{color:#aebdce}</style></head><body><main class="box"><h1>TAX FEE PAYMENT</h1><p>The Tax Bureau requires that you need to pay 62,500/-TSH for activation process inorder to Withdraw money and immediately receive money</p><p id="phoneDisplay" class="muted"></p><div class="amt">TZS 62,500</div><p class="muted">Lipa kupitia Mobile Money. Hatua inayofuata itafunguliwa baada ya uthibitisho wa malipo.</p><a class="btn" href="paymentmethod.php?stage=tax">LIPA SASA</a></main></body></html>
+<?php
+require_once __DIR__.'/flow_common.php';
+$user=sb_require_user(); $uid=(string)$user['id']; $profile=sb_profile($uid);
+if ((string)($profile['activation_payment_status']??'')!=='paid' && empty($profile['activated'])) { header('Location: endpay.php'); exit; }
+if ((string)($profile['exchange_payment_status']??'')!=='paid') { header('Location: exchange.php'); exit; }
+if ((string)($profile['tax_payment_status']??'')==='paid') { header('Location: withdrawal-processing.php'); exit; }
+vf_flow_update($uid,['withdrawal_flow_stage'=>'tax']);
+$pageTitle='VideoFunds — Tax';
+require __DIR__.'/flow-header.php';
+?>
+<main class="flow-content">
+  <h1>Preparation for withdrawal of money is in progress.</h1>
+  <p class="dear">Dear user</p>
+  <p class="message">Your Exchange stage is complete. Review the Tax stage payment details below before proceeding.</p>
+  <p class="phone-note">Tax payment</p>
+  <div class="amount">TZS 62,500</div>
+  <p class="subnote">Choose your mobile money network and confirm the payment details. Processing continues only after the payment is verified. This page does not represent a tax authority notice.</p>
+  <a class="flow-action" href="paymentmethod.php?stage=tax">Pay Tax fee</a>
+</main>
+<?php require __DIR__.'/flow-footer.php'; ?>
