@@ -1,24 +1,94 @@
 <?php
 require_once __DIR__.'/supabase.php';
-if($_SERVER['REQUEST_METHOD']!=='POST'){header('Location: index.php');exit;}
-$name=trim($_POST['fullname']??'');$email=trim($_POST['email']??'');$password=(string)($_POST['password']??'');$confirm=(string)($_POST['confirm_password']??'');$ref=trim($_POST['referral_code']??'');$country=trim($_POST['country_code']??'TZ');$currency=trim($_POST['currency_code']??'USD');$rate=(float)($_POST['exchange_rate']??1);
-if($name===''||!filter_var($email,FILTER_VALIDATE_EMAIL)||strlen($password)<8||$password!==$confirm){header('Location: index.php?error=invalid_registration');exit;}
-try{$a=sb_auth('signup',['email'=>$email,'password'=>$password,'data'=>['full_name'=>$name]]);$uid=$a['user']['id']??'';if($uid==='')throw new RuntimeException('Supabase signup did not return a user.');
-    sb_request('POST','/rest/v1/vf_profiles',['id'=>$uid,'full_name'=>$name,'email'=>$email,'balance'=>5.00,'referral_code'=>strtoupper(substr(bin2hex(random_bytes(5)),0,8)),'referred_by'=>$ref?:null,'country_code'=>$country,'currency_code'=>$currency,'exchange_rate'=>$rate,'daily_watch_count'=>0,'last_watch_date'=>date('Y-m-d')],true,null,['Prefer: resolution=merge-duplicates,return=minimal']);
-    // Email confirmation should be disabled in Supabase Auth settings.
-    // If signup did not return a session, immediately try password login.
-    if (empty($a['access_token'])) {
-        $a = sb_auth('token?grant_type=password', [
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: index.php');
+    exit;
+}
+
+$name = trim($_POST['fullname'] ?? '');
+$email = strtolower(trim($_POST['email'] ?? ''));
+$password = (string)($_POST['password'] ?? '');
+$confirm = (string)($_POST['confirm_password'] ?? '');
+$ref = trim($_POST['referral_code'] ?? '');
+$country = trim($_POST['country_code'] ?? 'TZ');
+$currency = trim($_POST['currency_code'] ?? 'USD');
+$rate = (float)($_POST['exchange_rate'] ?? 1);
+
+if ($name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL) ||
+    strlen($password) < 8 || $password !== $confirm) {
+    header('Location: index.php?error=invalid_registration');
+    exit;
+}
+
+try {
+    // First try to create the Auth account.
+    try {
+        $auth = sb_auth('signup', [
+            'email' => $email,
+            'password' => $password,
+            'data' => ['full_name' => $name]
+        ]);
+    } catch (Throwable $signupError) {
+        // A previous attempt may have created auth.users but failed before
+        // inserting the matching VideoFunds profile. Recover that account.
+        $message = strtolower($signupError->getMessage());
+        $isDuplicate = str_contains($message, 'already registered') ||
+                       str_contains($message, 'user already exists') ||
+                       str_contains($message, 'already been registered');
+
+        if (!$isDuplicate) {
+            throw $signupError;
+        }
+
+        $auth = sb_auth('token?grant_type=password', [
             'email' => $email,
             'password' => $password
         ]);
     }
 
-    if (empty($a['access_token']) || empty($a['user']['id'])) {
-        throw new RuntimeException('Signup succeeded but no login session was returned. Disable email confirmation in Supabase Authentication settings.');
+    // Supabase may return a user without a session if email confirmation
+    // is still enabled. Try immediate password login; Confirm email must be OFF.
+    if (empty($auth['access_token'])) {
+        $auth = sb_auth('token?grant_type=password', [
+            'email' => $email,
+            'password' => $password
+        ]);
     }
 
-    sb_set_auth_cookies($a);
+    if (empty($auth['access_token']) || empty($auth['user']['id'])) {
+        throw new RuntimeException(
+            'No login session returned. In Supabase Auth > Providers > Email, turn OFF Confirm email.'
+        );
+    }
+
+    // Ensure profile exists even if an earlier signup partially completed.
+    if (!function_exists('sb_ensure_profile')) {
+        throw new RuntimeException('Profile recovery helper is missing from supabase.php.');
+    }
+
+    sb_ensure_profile($auth['user'], [
+        'email' => $email,
+        'full_name' => $name,
+        'referred_by' => $ref !== '' ? $ref : null,
+        'country_code' => $country,
+        'currency_code' => $currency,
+        'exchange_rate' => $rate
+    ]);
+
+    sb_set_auth_cookies($auth);
     header('Location: dashboard.php');
     exit;
-}catch(Throwable $e){error_log('Supabase registration: '.$e->getMessage());header('Location: index.php?error=registration_failed');exit;}
+
+} catch (Throwable $e) {
+    error_log('VideoFunds registration/recovery: '.$e->getMessage());
+
+    $message = strtolower($e->getMessage());
+    if (str_contains($message, 'invalid login credentials')) {
+        header('Location: index.php?error=account_exists');
+    } else {
+        header('Location: index.php?error=registration_failed');
+    }
+    exit;
+}
+?>
