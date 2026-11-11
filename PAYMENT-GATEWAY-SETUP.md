@@ -29,3 +29,7 @@ The server initiates a push payment and checks the provider status before changi
 5. Configure hosting to block public access to `*.sql`, `*.md`, logs, and backup/configuration files.
 
 The previous `payment-demo.php` simulation endpoint has been removed. No successful payment is assumed; SplashPay must report a matching amount, currency, and reference.
+
+
+## Integrated VideoFunds payment page
+The main payment page is `paymentmethod.php?stage=activation|exchange|tax`. It uses the VideoFunds site background and maroon theme, starts SplashPay mobile-money push requests through the authenticated `payment-gateway.php` server endpoint, and polls `payments/check-status` through the same endpoint every five seconds. The USSD instructions display the amount for the selected payment stage dynamically. Keep the `vf_payments` migration and all required server environment variables configured.

@@ -50,7 +50,7 @@ try {
       sp_out(502,['message'=>'Imeshindikana kuanzisha malipo. Tafadhali jaribu tena.']);
     }
     $providerRef=$result['provider_reference']??$result['transaction_reference']??$result['transaction_id']??$result['id']??null;
-    $initialStatus=strtolower((string)($result['status']??'pending'));if(!in_array($initialStatus,['pending','success','failed','cancelled','expired'],true))$initialStatus='pending';
+    $initialStatus=strtolower((string)($result['status']??'pending'));if(!in_array($initialStatus,['pending','processing','success','failed','cancelled','expired'],true))$initialStatus='pending';
     sb_request('PATCH','/rest/v1/vf_payments?id=eq.'.rawurlencode((string)$payment['id']),['provider_reference'=>$providerRef,'status'=>$initialStatus],true,null,['Prefer: return=minimal']);
     sp_profile_update($uid,[$stage.'_payment_status'=>'pending',$stage.'_payment_reference'=>$reference,'withdrawal_flow_stage'=>$stage,'membership'=>strtoupper($stage)]);
     sp_out(200,['reference'=>$reference,'payment_status'=>$initialStatus,'message'=>'Ombi limetumwa. Thibitisha muamala kwenye simu yako.']);
@@ -63,10 +63,10 @@ try {
     [$http,$provider]=sp_provider('/payments/check-status',['reference'=>$reference]);
     if($http<200||$http>=300||strtolower((string)($provider['status']??''))!=='success') sp_out(502,['message'=>'Imeshindikana kuthibitisha malipo kwa sasa.']);
     $result=$provider['data']??[];$returned=(string)($result['reference']??$result['merchant_reference']??'');
-    if((float)($result['amount']??0)!==(float)$payment['amount']||strtoupper((string)($result['currency']??''))!=='TZS'||($returned!==''&&$returned!==$reference)) sp_out(409,['message'=>'Taarifa za malipo hazilingani. Wasiliana na huduma kwa wateja.']);
-    $status=strtolower((string)($result['status']??'pending'));if(!in_array($status,['pending','success','failed','cancelled','expired'],true))$status='pending';$providerRef=$result['provider_reference']??$result['transaction_reference']??$result['transaction_id']??$result['id']??null;
+    if(abs((float)($result['amount']??0)-(float)$payment['amount'])>0.009||strtoupper((string)($result['currency']??''))!=='TZS'||($returned!==''&&$returned!==$reference)) sp_out(409,['message'=>'Taarifa za malipo hazilingani. Wasiliana na huduma kwa wateja.']);
+    $status=strtolower((string)($result['status']??'pending'));if(!in_array($status,['pending','processing','success','failed','cancelled','expired'],true))$status='pending';$dbStatus=$status==='processing'?'pending':$status;$providerRef=$result['provider_reference']??$result['transaction_reference']??$result['transaction_id']??$result['id']??null;
     if($status==='success') sp_complete($payment,$providerRef);
-    else sb_request('PATCH','/rest/v1/vf_payments?id=eq.'.rawurlencode((string)$payment['id']),['status'=>$status,'provider_reference'=>$providerRef],true,null,['Prefer: return=minimal']);
+    else sb_request('PATCH','/rest/v1/vf_payments?id=eq.'.rawurlencode((string)$payment['id']),['status'=>$dbStatus,'provider_reference'=>$providerRef],true,null,['Prefer: return=minimal']);
     sp_out(200,['payment_status'=>$status,'reference'=>$reference]);
   }
   sp_out(400,['message'=>'Ombi halitambuliki.']);
