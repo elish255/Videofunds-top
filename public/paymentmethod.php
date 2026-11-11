@@ -41,6 +41,7 @@ input[type=tel]{width:100%;padding:14px;border:0;outline:0;font:inherit;font-siz
 .pay-btn:hover{background:#814B5E}.pay-btn:disabled{opacity:.6;cursor:wait}
 #msg{min-height:20px;color:#b42318;font-size:13px;margin:10px 0 0}
 .powered{font-size:12px;color:#8792a2;text-align:center;margin-top:14px}
+.manual-box{margin-top:22px;padding:17px;border:1px solid #ead4da;background:#fff8fa;border-radius:14px}.manual-box h2{font-size:16px;color:#68162e;font-weight:800;margin:0 0 7px}.manual-box p{font-size:13px;color:#667085;line-height:1.5}.manual-box input{width:100%;padding:13px;border:1px solid #d8dee7;border-radius:10px;font:inherit}.manual-btn{width:100%;border:0;border-radius:10px;background:#814B5E;color:white;padding:13px;margin-top:10px;font-weight:800;cursor:pointer}.manual-status{font-size:13px;margin-top:10px;color:#68162e;font-weight:700}
 .ussd-title{background:#f7f8fa;padding:15px 20px;font-size:11px;letter-spacing:.8px;font-weight:800;color:#68162e}
 .operator{border-top:1px solid #edf0f4}.operator-toggle{width:100%;border:0;background:#fff;padding:14px 18px;display:flex;align-items:center;gap:12px;text-align:left;font-weight:700;color:#344054;cursor:pointer}
 .operator-toggle img{width:38px;height:38px;object-fit:contain;border:1px solid #e2e8f0;border-radius:9px;padding:3px}
@@ -72,7 +73,16 @@ input[type=tel]{width:100%;padding:14px;border:0;outline:0;font:inherit;font-siz
 <label for="phone">Namba ya simu ya Tanzania</label>
 <div class="phone-wrap"><span class="prefix">🇹🇿 +255</span><input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="0712345678" maxlength="13" required></div>
 <button id="submit" class="pay-btn" type="submit">LIPA SASA</button><p id="msg" role="status" aria-live="polite"></p>
-</form><div class="powered">Malipo salama kupitia SplashPay</div>
+</form>
+<div class="manual-box" id="manualBox">
+ <h2>Umeshafanya malipo kwa LIPA NAMBA?</h2>
+ <p>Baada ya kulipia TZS <?=$amountText?>, weka namba ya simu uliyotumia. Taarifa zitatumwa kwa Admin kwa ajili ya kuhakikiwa. Account itaendelea baada ya Admin ku-approve.</p>
+ <label for="manualPhone">Namba ya simu uliyotumia kulipia</label>
+ <input id="manualPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="0712345678" maxlength="13">
+ <button class="manual-btn" id="manualSubmit" type="button">NIMELIPIA — THIBITISHA</button>
+ <div class="manual-status" id="manualStatus" role="status" aria-live="polite"></div>
+</div>
+<div class="powered">Malipo salama ya simu au uthibitisho wa LIPA NAMBA</div>
 </div></section>
 <section class="payment-card">
 <div class="ussd-title">NJIA ZA MALIPO / USSD MENU</div>
@@ -95,7 +105,11 @@ foreach($operators as $op): ?>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script><script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/umd/popper.min.js"></script><script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script>
 <script>
 const form=document.getElementById('pay'),btn=document.getElementById('submit'),msg=document.getElementById('msg'),loader=document.getElementById('loader');
+const manualBtn=document.getElementById('manualSubmit'),manualStatus=document.getElementById('manualStatus');let manualPoll=null;
 document.querySelectorAll('.operator-toggle').forEach(button=>button.addEventListener('click',()=>{const item=button.closest('.operator'),wasOpen=item.classList.contains('open');document.querySelectorAll('.operator').forEach(x=>{x.classList.remove('open');x.querySelector('.operator-toggle').setAttribute('aria-expanded','false')});if(!wasOpen){item.classList.add('open');button.setAttribute('aria-expanded','true')}}));
+async function checkManual(id){try{const r=await fetch('manual-payment.php?action=status&id='+encodeURIComponent(id),{cache:'no-store'});const d=await r.json();if(d.status==='approved'){manualStatus.textContent='Malipo yamethibitishwa na Admin. Tunaendelea...';clearInterval(manualPoll);setTimeout(()=>location.href=d.next_url,900);}else if(d.status==='rejected'){clearInterval(manualPoll);manualBtn.disabled=false;manualStatus.textContent='Malipo hayajathibitishwa. Tafadhali lipia tena kisha tuma taarifa upya.';document.getElementById('manualPhone').value='';}else{manualStatus.textContent='Taarifa zimefika kwa Admin. Inasubiri kuhakikiwa...';}}catch(e){manualStatus.textContent='Tunasubiri majibu ya Admin...';}}
+manualBtn.addEventListener('click',async()=>{manualStatus.textContent='';let phone=document.getElementById('manualPhone').value.replace(/\D/g,'');if(phone.startsWith('0'))phone='255'+phone.slice(1);else if(phone.startsWith('7')||phone.startsWith('6'))phone='255'+phone;if(!/^255[0-9]{9}$/.test(phone)){manualStatus.textContent='Weka namba sahihi ya simu ya Tanzania.';return;}manualBtn.disabled=true;try{const r=await fetch('manual-payment.php',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({stage:<?=json_encode($stage)?>,phone}),cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.message||'Imeshindikana kutuma taarifa.');manualStatus.textContent=d.message||'Taarifa zimetumwa kwa Admin.';await checkManual(d.request_id);manualPoll=setInterval(()=>checkManual(d.request_id),5000);}catch(e){manualBtn.disabled=false;manualStatus.textContent=e.message||'Hitilafu imetokea.';}});
+
 form.addEventListener('submit',async e=>{
  e.preventDefault();msg.textContent='';
  let phone=document.getElementById('phone').value.replace(/\D/g,'');

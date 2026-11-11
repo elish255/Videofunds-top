@@ -6,7 +6,8 @@ function sp_out(int $code,array $data): void { http_response_code($code); echo j
 function sp_env(string $key): string { return trim((string)getenv($key)); }
 function sp_provider(string $path,array $payload,string $reference=''): array {
   $key=sp_env('SPLASHPAY_API_KEY'); $secret=sp_env('SPLASHPAY_API_SECRET');
-  if($key===''||$secret==='') throw new RuntimeException('SplashPay API credentials are not configured on the server.');
+  if($key===''||$secret==='') throw new DomainException('PAYMENT_PROVIDER_NOT_CONFIGURED');
+  if(!function_exists('curl_init')) throw new RuntimeException('PHP cURL extension is not available.');
   $headers=['Content-Type: application/json','Accept: application/json','X-API-KEY: '.$key,'X-API-SECRET: '.$secret];
   if($reference!=='') $headers[]='Idempotency-Key: '.$reference;
   $ch=curl_init('https://api.splashpay.co.tz/api/v1'.$path);
@@ -40,19 +41,24 @@ try {
     if($stage==='exchange' && ($profile['activation_payment_status']??'')!=='paid') sp_out(403,['message'=>'Kamilisha activation kwanza.']);
     if($stage==='tax' && (($profile['activation_payment_status']??'')!=='paid'||($profile['exchange_payment_status']??'')!=='paid')) sp_out(403,['message'=>'Kamilisha hatua zilizotangulia kwanza.']);
     if(($profile[$stage.'_payment_status']??'')==='paid') sp_out(409,['message'=>'Hatua hii tayari imelipiwa.']);
-    $amount=$amounts[$stage];$reference='VF-'.strtoupper(bin2hex(random_bytes(12)));
+    $amount=$amounts[$stage];$reference='INV'.strtoupper(bin2hex(random_bytes(12)));
     $ins=sb_request('POST','/rest/v1/vf_payments',['user_id'=>$uid,'stage'=>$stage,'order_id'=>$reference,'amount'=>$amount,'currency'=>'TZS','phone'=>$phone,'status'=>'pending'],true,null,['Prefer: return=representation']);
     $payment=$ins['data'][0]??null;if(!$payment) throw new RuntimeException('Could not save payment request.');
     [$http,$provider]=sp_provider('/payments/mobile-money',['amount'=>$amount,'currency'=>'TZS','reference'=>$reference,'phone'=>$phone,'customer_name'=>$profile['full_name']??'VideoFunds User','customer_email'=>$user['email']??'','metadata'=>['user_id'=>$uid,'stage'=>$stage]],$reference);
-    $result=$provider['data']??$provider;
-    if($http<200||$http>=300||strtolower((string)($provider['status']??''))!=='success') {
+    $result=is_array($provider['data']??null)?$provider['data']:$provider;
+    $httpAccepted=$http>=200&&$http<300;
+    $providerStatus=strtolower((string)($result['status']??$provider['status']??'pending'));
+    // Mobile-money push creation is asynchronous: HTTP 2xx + pending/processing is a valid acceptance.
+    if(!$httpAccepted || in_array($providerStatus,['failed','failure','error','rejected','cancelled','expired'],true)) {
       sb_request('PATCH','/rest/v1/vf_payments?id=eq.'.rawurlencode((string)$payment['id']),['status'=>'failed'],true,null,['Prefer: return=minimal']);
-      sp_out(502,['message'=>'Imeshindikana kuanzisha malipo. Tafadhali jaribu tena.']);
+      sp_out(502,['message'=>'Ombi la malipo halijakubaliwa. Hakikisha namba ni sahihi kisha jaribu tena.']);
     }
     $providerRef=$result['provider_reference']??$result['transaction_reference']??$result['transaction_id']??$result['id']??null;
-    $initialStatus=strtolower((string)($result['status']??'pending'));if(!in_array($initialStatus,['pending','processing','success','failed','cancelled','expired'],true))$initialStatus='pending';
-    sb_request('PATCH','/rest/v1/vf_payments?id=eq.'.rawurlencode((string)$payment['id']),['provider_reference'=>$providerRef,'status'=>$initialStatus],true,null,['Prefer: return=minimal']);
+    $initialStatus=in_array($providerStatus,['pending','processing','success'],true)?$providerStatus:'pending';
+    $dbInitialStatus=$initialStatus==='processing'?'pending':$initialStatus;
+    sb_request('PATCH','/rest/v1/vf_payments?id=eq.'.rawurlencode((string)$payment['id']),['provider_reference'=>$providerRef,'status'=>$dbInitialStatus],true,null,['Prefer: return=minimal']);
     sp_profile_update($uid,[$stage.'_payment_status'=>'pending',$stage.'_payment_reference'=>$reference,'withdrawal_flow_stage'=>$stage,'membership'=>strtoupper($stage)]);
+    // The status endpoint performs final amount/reference validation before marking a payment paid.
     sp_out(200,['reference'=>$reference,'payment_status'=>$initialStatus,'message'=>'Ombi limetumwa. Thibitisha muamala kwenye simu yako.']);
   }
   if($action==='status') {
@@ -70,4 +76,5 @@ try {
     sp_out(200,['payment_status'=>$status,'reference'=>$reference]);
   }
   sp_out(400,['message'=>'Ombi halitambuliki.']);
-} catch(Throwable $e) { error_log('SplashPay integration: '.$e->getMessage()); sp_out(500,['message'=>'Kuna hitilafu kwenye huduma ya malipo. Tafadhali jaribu tena baadaye.']); }
+} catch(DomainException $e) { error_log('Payment gateway configuration: '.$e->getMessage()); sp_out(503,['message'=>'Huduma ya malipo haijawekwa sawa kwa sasa. Tafadhali wasiliana na Admin.']); }
+  catch(Throwable $e) { error_log('Payment gateway error: '.$e->getMessage()); sp_out(500,['message'=>'Ombi la malipo halijakamilika kutokana na hitilafu ya mfumo. Tafadhali jaribu tena au wasiliana na Admin.']); }

@@ -5,12 +5,16 @@ require_admin();
 
 $error=''; $users=[];
 try { $users=list_users(); } catch(Throwable $e) { $error=$e->getMessage(); }
+$allUsers=$users;
 $q=strtolower(trim($_GET['q']??''));
 if($q!==''){
     $users=array_values(array_filter($users, function($u) use($q){
         return str_contains(strtolower(($u['name']??'').' '.($u['email']??'').' '.($u['uid']??'').' '.($u['referral']??'')),$q);
     }));
 }
+$manualRequests=[];$manualRequestError='';
+try{$mr=sb_request('GET','/rest/v1/vf_manual_payment_requests?select=*&order=created_at.desc&limit=200');$manualRequests=$mr['data']??[];}catch(Throwable $e){$manualRequestError=$e->getMessage();}
+$pendingManual=count(array_filter($manualRequests,fn($r)=>($r['status']??'')==='pending'));
 $csrf=csrf_token();
 $total=count($users);
 $banned=count(array_filter($users,fn($u)=>!empty($u['disabled'])));
@@ -47,6 +51,7 @@ body{overflow-x:hidden}.app{min-height:100vh}.sidebar{position:fixed;left:0;top:
 <a href="#users"><span class="left"><span class="ico">♙</span>Inactive Referral</span><span class="count"><?=max(0,$totalReferral-$activeReferral)?></span></a>
 <a href="#users"><span class="left"><span class="ico">✓</span>Make Active</span><span class="count"><?=count(array_filter($users,fn($u)=>!empty($u['activated'])))?></span></a>
 <a href="#users"><span class="left"><span class="ico">♛</span>Membership: Activation / Exchange / Tax</span></a>
+<a href="#manual-payments"><span class="left"><span class="ico">✓</span>LIPA NAMBA approvals</span><span class="count"><?=$pendingManual?></span></a>
 <a href="#balance"><span class="left"><span class="ico">⊕</span>Add / Reduce Amount</span></a>
 <a href="#users"><span class="left"><span class="ico">⊘</span>Ban Account</span><span class="count"><?=$banned?></span></a>
 <a href="#users"><span class="left"><span class="ico">▢</span>Delete Account</span></a>
@@ -62,8 +67,8 @@ body{overflow-x:hidden}.app{min-height:100vh}.sidebar{position:fixed;left:0;top:
 </aside>
 <div class="drawer-backdrop" id="backdrop" onclick="closeMenu()"></div>
 <main class="main">
-<div class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="menu" onclick="openMenu()">☰</button><div><h1>Admin Control</h1><div class="small" style="color:#8295aa"><?=h(VF_ADMIN_EMAIL ?: 'VideoFunds administrator')?></div></div></div><div class="right"><a class="logout" href="/admin/logout.php">Logout</a></div></div>
-<?php if($flash):?><div class="flash">✓ <?=h($flash)?></div><?php endif?>
+<div class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="menu" onclick="openMenu()">☰</button><div><h1>Admin Control</h1><div class="small" style="color:#8295aa"><?=h(VF_ADMIN_EMAIL ?: 'VideoFunds administrator')?></div></div></div><div class="right"><button type="button" class="btn btn-yellow" id="enableAdminAlerts">🔔 Washa arifa + sauti</button><a class="logout" href="/admin/logout.php">Logout</a></div></div>
+<div id="adminAlertToast" style="display:none;position:sticky;top:10px;z-index:1500;background:#123e32;border:1px solid #36d6a5;color:#eafff7;padding:15px 18px;border-radius:14px;margin-bottom:15px;box-shadow:0 12px 35px #0008"><b id="adminAlertTitle">Ombi jipya la malipo!</b><div id="adminAlertText" style="margin:5px 0 10px"></div><a href="/admin/?refresh=1#manual-payments" class="btn btn-green">Fungua maombi ya malipo</a></div><?php if($flash):?><div class="flash">✓ <?=h($flash)?></div><?php endif?>
 <?php if($error):?><div class="err"><?=h($error)?></div><?php endif?>
 <section class="stats">
 <div class="stat"><div class="label">Watumiaji</div><div class="num"><?=$total?></div><div class="sub">Accounts zote</div></div>
@@ -71,6 +76,19 @@ body{overflow-x:hidden}.app{min-height:100vh}.sidebar{position:fixed;left:0;top:
 <div class="stat"><div class="label">Flow Payments</div><div class="num"><?=count(array_filter($users,fn($u)=>(($u['exchange_payment_status']??'')==='paid')))?></div><div class="sub">Exchange paid</div></div>
 <div class="stat"><div class="label">Balance jumla</div><div class="num">TSh <?=number_format($totalBalance*2600,0)?></div><div class="sub">$<?=number_format($totalBalance,2)?></div></div>
 </section>
+<section class="panel" id="manual-payments">
+<div class="panel-head"><h2>Uthibitisho wa malipo ya LIPA NAMBA</h2><span class="small" style="color:#8295aa"><?=$pendingManual?> yanayosubiri</span></div>
+<?php if($manualRequestError):?><div class="err">Jedwali la uthibitisho halijapatikana. Tekeleza SQL migration ya <b>vf_manual_payment_requests</b> kwanza.</div><?php endif?>
+<?php $pendingRows=array_values(array_filter($manualRequests,fn($r)=>($r['status']??'')==='pending')); ?>
+<?php if(!$pendingRows):?><div class="empty">Hakuna ombi jipya la LIPA NAMBA linalosubiri.</div><?php endif?>
+<div class="user-list">
+<?php foreach($pendingRows as $mr):$mpUser=null;foreach($allUsers as $candidate){if(($candidate['uid']??'')===($mr['user_id']??'')){$mpUser=$candidate;break;}}?>
+<article class="user-card"><div class="user-top"><div class="user-main"><h3 class="user-name"><?=h((string)($mpUser['name']??'User'))?></h3><div class="meta"><?=h((string)($mpUser['email']??''))?> · Simu: <b><?=h((string)$mr['phone'])?></b></div><div class="status-line">Hatua: <span class="badge activation"><?=h(strtoupper((string)$mr['stage']))?></span> · Kiasi: <b>TZS <?=number_format((float)$mr['amount'])?></b> · Tarehe: <?=h(date('d/m/Y H:i',strtotime((string)$mr['created_at'])))?></div><div class="small" style="color:#f5c56b;margin-top:7px">Hakiki muamala kwenye akaunti ya LIPA NAMBA kabla ya ku-approve.</div></div></div>
+<div class="actions">
+<form method="post" action="/admin/action.php" onsubmit="return confirm('Umethibitisha kupokea TZS <?=number_format((float)$mr['amount'])?> kutoka <?=h((string)$mr['phone'])?>?')"><input type="hidden" name="csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="manual_payment_approve"><input type="hidden" name="request_id" value="<?=h((string)$mr['id'])?>"><button class="btn btn-green">APPROVE — Ruhusu hatua inayofuata</button></form>
+<form method="post" action="/admin/action.php" onsubmit="return confirm('Ukireject, user atarudishwa kulipia hatua hii tena. Endelea?')"><input type="hidden" name="csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="manual_payment_reject"><input type="hidden" name="request_id" value="<?=h((string)$mr['id'])?>"><button class="btn btn-red">REJECT — Rudisha alipe tena</button></form>
+</div></article><?php endforeach?>
+</div></section>
 <section class="panel" id="users">
 <div class="panel-head"><h2>Watumiaji</h2><span class="small" style="color:#8295aa"><?=count($users)?> wanaoonekana</span></div>
 <form class="search" method="get"><input class="input" name="q" placeholder="Tafuta jina, email, UID au referral code" value="<?=h($q)?>"><button class="btn btn-blue">Tafuta</button><?php if($q!==''):?><a class="btn btn-dark" href="/admin/">Safisha</a><?php endif?></form>
@@ -119,6 +137,18 @@ function closeModal(id){document.getElementById(id).classList.remove('show')}
 function openNotify(uid){document.getElementById('modalUid').value=uid;document.getElementById('notifyModal').classList.add('show')}
 function openSms(name){document.getElementById('smsFor').textContent=name?('Kwa: '+name):'Ingiza namba ya simu';document.getElementById('smsModal').classList.add('show')}
 function sendSms(){const n=document.getElementById('smsNumber').value.trim(),b=document.getElementById('smsBody').value.trim();if(!n||!b){alert('Weka namba na ujumbe kwanza.');return}location.href='sms:'+encodeURIComponent(n)+'?body='+encodeURIComponent(b)}
+
+const adminFeedStart = <?=json_encode(gmdate('Y-m-d\\TH:i:s\\Z'))?>;
+const alertButton=document.getElementById('enableAdminAlerts');
+let adminAlertsEnabled=localStorage.getItem('vf_admin_alerts_enabled')==='1';
+let lastManualAlert=localStorage.getItem('vf_admin_manual_last_seen')||adminFeedStart;
+let alertAudioContext=null;
+function alertBeep(){try{const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;alertAudioContext=alertAudioContext||new Ctx();if(alertAudioContext.state==='suspended')alertAudioContext.resume();[0,0.22,0.44].forEach((delay,i)=>{const osc=alertAudioContext.createOscillator(),gain=alertAudioContext.createGain();osc.type='sine';osc.frequency.value=i===1?1040:880;gain.gain.setValueAtTime(.0001,alertAudioContext.currentTime+delay);gain.gain.exponentialRampToValueAtTime(.22,alertAudioContext.currentTime+delay+.025);gain.gain.exponentialRampToValueAtTime(.0001,alertAudioContext.currentTime+delay+.16);osc.connect(gain);gain.connect(alertAudioContext.destination);osc.start(alertAudioContext.currentTime+delay);osc.stop(alertAudioContext.currentTime+delay+.18)})}catch(e){console.warn('Admin alert sound unavailable',e)}}
+function showManualAlert(item){const stage={activation:'Activation',exchange:'Exchange',tax:'Tax'}[item.stage]||item.stage;const message=stage+' · TZS '+Number(item.amount).toLocaleString()+' · Simu '+item.phone;document.getElementById('adminAlertTitle').textContent='Ombi jipya la malipo ya LIPA NAMBA';document.getElementById('adminAlertText').textContent=message;document.getElementById('adminAlertToast').style.display='block';alertBeep();if('Notification'in window&&Notification.permission==='granted'){const n=new Notification('VideoFunds Admin — Malipo mapya',{body:message,tag:'vf-manual-'+item.id,renotify:false});n.onclick=()=>{window.focus();location.hash='manual-payments';n.close()}}}
+async function pollManualPaymentAlerts(){if(!adminAlertsEnabled)return;try{const u='/admin/notifications-feed.php?after='+encodeURIComponent(lastManualAlert);const r=await fetch(u,{cache:'no-store',credentials:'same-origin'});if(r.status===401||r.status===403)return;if(!r.ok)return;const data=await r.json();const rows=data.requests||[];for(const item of rows){showManualAlert(item);if(item.created_at&&item.created_at>lastManualAlert)lastManualAlert=item.created_at}if(rows.length){localStorage.setItem('vf_admin_manual_last_seen',lastManualAlert);const count=document.querySelector('#manual-payments .panel-head .small');if(count)count.textContent='Ombi jipya limepokelewa — sasisha ukurasa kuona maombi yote'}}catch(e){console.warn('Admin notification poll failed',e)}}
+async function enableAdminAlerts(){try{if('Notification'in window){const p=await Notification.requestPermission();if(p!=='granted'){alert('Ruhusu Notifications kwenye browser settings ili upokee arifa juu ya browser.');return}}adminAlertsEnabled=true;localStorage.setItem('vf_admin_alerts_enabled','1');if(!localStorage.getItem('vf_admin_manual_last_seen'))localStorage.setItem('vf_admin_manual_last_seen',adminFeedStart);lastManualAlert=localStorage.getItem('vf_admin_manual_last_seen')||adminFeedStart;alertBeep();alertButton.textContent='✓ Arifa + sauti zimewashwa';pollManualPaymentAlerts()}catch(e){alert('Imeshindikana kuwasha arifa. Ruhusu notifications kwenye browser.')}}
+alertButton?.addEventListener('click',enableAdminAlerts);if(adminAlertsEnabled){alertButton.textContent='✓ Arifa + sauti zimewashwa';setInterval(pollManualPaymentAlerts,7000);setTimeout(pollManualPaymentAlerts,1200)}
+
 document.getElementById('selectAll')?.addEventListener('change',e=>document.querySelectorAll('.user-check').forEach(x=>x.checked=e.target.checked));
 async function balanceAction(kind,uid,button){const card=button.closest('.user-card'),input=card.querySelector('.amount-input'),amount=parseFloat(input.value);if(!amount||amount<=0){alert('Weka kiasi sahihi.');input.focus();return}button.disabled=true;const form=new URLSearchParams({csrf:'<?=h($csrf)?>',action:'balance',uid:uid,kind:kind,amount:String(amount)});try{const r=await fetch('/admin/action.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:form});if(!r.ok)throw new Error(await r.text());location.reload()}catch(e){alert('Imeshindikana: '+e.message);button.disabled=false}}
 async function bulkDelete(){const ids=[...document.querySelectorAll('.user-check:checked')].map(x=>x.value);if(!ids.length){alert('Chagua account kwanza.');return}if(!confirm('Una uhakika unataka kufuta '+ids.length+' account? Hatua hii haiwezi kurudishwa.'))return;const form=new URLSearchParams({csrf:'<?=h($csrf)?>',action:'delete_many'});ids.forEach(id=>form.append('uids[]',id));const r=await fetch('/admin/action.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:form});if(!r.ok){alert(await r.text());return}location.reload()}

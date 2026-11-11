@@ -33,3 +33,7 @@ The previous `payment-demo.php` simulation endpoint has been removed. No success
 
 ## Integrated VideoFunds payment page
 The main payment page is `paymentmethod.php?stage=activation|exchange|tax`. It uses the VideoFunds site background and maroon theme, starts SplashPay mobile-money push requests through the authenticated `payment-gateway.php` server endpoint, and polls `payments/check-status` through the same endpoint every five seconds. The USSD instructions display the amount for the selected payment stage dynamically. Keep the `vf_payments` migration and all required server environment variables configured.
+
+
+## Manual LIPA NAMBA approvals
+Run `supabase-manual-payment-migration.sql` once in Supabase SQL Editor. Users can submit the phone number used for a LIPA NAMBA payment on the current payment stage. Requests appear in Admin → LIPA NAMBA approvals. Admin must independently verify the payment in the merchant/mobile-money account before Approve. Approve marks only that stage as paid and unlocks the next stage; Reject resets that stage to unpaid and the user is prompted to pay again.
