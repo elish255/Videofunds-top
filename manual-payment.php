@@ -29,7 +29,7 @@ try{
   $id=trim((string)($_GET['id']??''));if($id===''||!ctype_digit($id))mp_out(400,['message'=>'Ombi si sahihi.']);
   $r=sb_request('GET','/rest/v1/vf_manual_payment_requests?select=id,status,stage&user_id=eq.'.rawurlencode($uid).'&id=eq.'.rawurlencode($id).'&limit=1');
   $row=$r['data'][0]??null;if(!$row)mp_out(404,['message'=>'Ombi halijapatikana.']);
-  $next=['activation'=>'exchange.php','exchange'=>'tax.php','tax'=>'dashboard.php?flow=completed'];
+  $next=['activation'=>'index-exchange.php','exchange'=>'newindex.php','tax'=>'confirmation1.php'];
   mp_out(200,['status'=>$row['status'],'stage'=>$row['stage'],'next_url'=>$next[$row['stage']]??'dashboard.php']);
  }
  mp_out(405,['message'=>'Method haikubaliki.']);

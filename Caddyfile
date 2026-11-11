@@ -1,7 +1,7 @@
 :{$PORT:80} {
     root * /app/public
     encode zstd gzip
-    @private path /supabase_config.php /supabase.php /runtime_bootstrap.php /.user.ini /admin/_lib.php /supabase-schema.sql /README-SUPABASE.md /payment-logs.txt /webhook-logs.txt /webhook_debug.txt /transactions.json /pending.json /pending_transactions.json /valid-transactions.json /valid_transactions.txt /access_log /info.php
+    @private path /supabase_config.php /supabase.php /runtime_bootstrap.php /.user.ini /admin/_lib.php /supabase-schema.sql /supabase-withdrawal-flow-migration.sql /README-SUPABASE.md /payment-logs.txt /webhook-logs.txt /webhook_debug.txt /transactions.json /pending.json /pending_transactions.json /valid-transactions.json /valid_transactions.txt /access_log /info.php
     respond @private 404
     php_server
 }

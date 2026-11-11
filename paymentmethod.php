@@ -6,6 +6,7 @@ $stage=$_GET['stage']??'activation';
 if(!in_array($stage,['activation','exchange','tax'],true)) $stage='activation';
 $amount=['activation'=>35500,'exchange'=>40820,'tax'=>62500][$stage];
 if(($profile[$stage.'_payment_status']??'')==='paid'){vf_flow_redirect_for_profile($profile);}
+if(in_array($stage,['exchange','tax'],true) && !vf_has_draft($profile) && ($profile[$stage.'_payment_status']??'')!=='paid'){header('Location: '.(vf_stage_paid($profile,'activation')?'index-exchange.php':'endpay.php'));exit;}
 $amountText=number_format($amount,0,'.',',');
 $stageLabels=['activation'=>'Activation','exchange'=>'Exchange','tax'=>'Tax'];
 $stageLabel=$stageLabels[$stage];

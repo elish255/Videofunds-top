@@ -62,11 +62,22 @@ try{
   }else{
    $updates=[$stage.'_payment_status'=>'unpaid',$stage.'_payment_reference'=>null,$stage.'_paid_at'=>null,'withdrawal_flow_stage'=>$stage,'membership'=>strtoupper($stage),'updated_at'=>date('c')];if($stage==='activation')$updates['activated']=false;
    sb_request('PATCH','/rest/v1/vf_profiles?id=eq.'.rawurlencode($uid),$updates,true,null,['Prefer: return=minimal']);
-   sb_request('PATCH','/rest/vf_manual_payment_requests?id=eq.'.rawurlencode($rid),['status'=>'rejected','reviewed_at'=>date('c')],true,null,['Prefer: return=minimal']);
+   sb_request('PATCH','/rest/v1/vf_manual_payment_requests?id=eq.'.rawurlencode($rid),['status'=>'rejected','reviewed_at'=>date('c')],true,null,['Prefer: return=minimal']);
    sb_request('POST','/rest/v1/vf_notifications',[['user_id'=>$uid,'title'=>'Malipo hayajathibitishwa','body'=>'Malipo ya '.$stage.' hayajathibitishwa. Tafadhali lipia tena na utume taarifa upya.']],true,null,['Prefer: return=minimal']);
    audit('manual_payment_rejected',$uid,['request_id'=>$rid,'stage'=>$stage]);
   }
   header('Location: /admin/?updated=1#manual-payments');exit;
+ }
+ if($action==='withdrawal_set'){
+  $wid=trim((string)($_POST['withdrawal_id']??''));$status=strtolower(trim((string)($_POST['status']??'')));
+  if($wid===''||!ctype_digit($wid))throw new RuntimeException('Withdrawal si sahihi.');
+  if(!in_array($status,['approved','paid','rejected'],true))throw new RuntimeException('Status si sahihi.');
+  $res=sb_rpc('vf_admin_set_withdrawal',['p_id'=>(int)$wid,'p_status'=>$status,'p_note'=>trim((string)($_POST['note']??''))]);
+  $wuid=(string)($res['user_id']??'');$wamt=number_format((float)($res['amount']??0),2);
+  $texts=['approved'=>['Withdrawal imekubaliwa','Ombi lako la kutoa $'.$wamt.' limekubaliwa (Approved). Malipo yatatumwa hivi karibuni.'],'paid'=>['Withdrawal imelipwa','Ombi lako la kutoa $'.$wamt.' limelipwa (Paid). Tafadhali angalia akaunti yako.'],'rejected'=>['Withdrawal imekataliwa','Ombi lako la kutoa $'.$wamt.' limekataliwa. Kiasi kimerudishwa kwenye balance yako.']][$status];
+  if($wuid!=='')sb_request('POST','/rest/v1/vf_notifications',[['user_id'=>$wuid,'title'=>$texts[0],'body'=>$texts[1]]],true,null,['Prefer: return=minimal']);
+  audit('withdrawal_'.$status,$wuid,['withdrawal_id'=>$wid]);
+  header('Location: /admin/?updated=1#withdrawals');exit;
  }
  throw new RuntimeException('Action haijulikani');
 }catch(Throwable $e){http_response_code(400);echo '<!doctype html><meta charset="utf-8"><body style="font-family:Arial;background:#06101d;color:white;padding:25px"><h2>Admin action failed</h2><p>'.h($e->getMessage()).'</p><a style="color:#55e0c2" href="/admin/">Rudi Admin</a></body>';}

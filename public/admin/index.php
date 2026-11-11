@@ -15,6 +15,11 @@ if($q!==''){
 $manualRequests=[];$manualRequestError='';
 try{$mr=sb_request('GET','/rest/v1/vf_manual_payment_requests?select=*&order=created_at.desc&limit=200');$manualRequests=$mr['data']??[];}catch(Throwable $e){$manualRequestError=$e->getMessage();}
 $pendingManual=count(array_filter($manualRequests,fn($r)=>($r['status']??'')==='pending'));
+$withdrawals=[];$withdrawalError='';
+try{$wr=sb_request('GET','/rest/v1/vf_withdrawals?select=*&order=created_at.desc&limit=300');$withdrawals=$wr['data']??[];}catch(Throwable $e){$withdrawalError=$e->getMessage();}
+$openWithdrawals=array_values(array_filter($withdrawals,fn($w)=>in_array(($w['status']??''),['pending','approved'],true)));
+$doneWithdrawals=array_slice(array_values(array_filter($withdrawals,fn($w)=>in_array(($w['status']??''),['paid','rejected'],true))),0,20);
+$pendingWithdrawals=count(array_filter($withdrawals,fn($w)=>($w['status']??'')==='pending'));
 $csrf=csrf_token();
 $total=count($users);
 $banned=count(array_filter($users,fn($u)=>!empty($u['disabled'])));
@@ -52,6 +57,7 @@ body{overflow-x:hidden}.app{min-height:100vh}.sidebar{position:fixed;left:0;top:
 <a href="#users"><span class="left"><span class="ico">✓</span>Make Active</span><span class="count"><?=count(array_filter($users,fn($u)=>!empty($u['activated'])))?></span></a>
 <a href="#users"><span class="left"><span class="ico">♛</span>Membership: Activation / Exchange / Tax</span></a>
 <a href="#manual-payments"><span class="left"><span class="ico">✓</span>LIPA NAMBA approvals</span><span class="count"><?=$pendingManual?></span></a>
+<a href="#withdrawals"><span class="left"><span class="ico">⇩</span>Withdrawals</span><span class="count"><?=$pendingWithdrawals?></span></a>
 <a href="#balance"><span class="left"><span class="ico">⊕</span>Add / Reduce Amount</span></a>
 <a href="#users"><span class="left"><span class="ico">⊘</span>Ban Account</span><span class="count"><?=$banned?></span></a>
 <a href="#users"><span class="left"><span class="ico">▢</span>Delete Account</span></a>
@@ -89,6 +95,26 @@ body{overflow-x:hidden}.app{min-height:100vh}.sidebar{position:fixed;left:0;top:
 <form method="post" action="/admin/action.php" onsubmit="return confirm('Ukireject, user atarudishwa kulipia hatua hii tena. Endelea?')"><input type="hidden" name="csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="manual_payment_reject"><input type="hidden" name="request_id" value="<?=h((string)$mr['id'])?>"><button class="btn btn-red">REJECT — Rudisha alipe tena</button></form>
 </div></article><?php endforeach?>
 </div></section>
+<section class="panel" id="withdrawals">
+<div class="panel-head"><h2>Withdrawals (Pending → Approved → Paid)</h2><span class="small" style="color:#8295aa"><?=$pendingWithdrawals?> pending · <?=count($openWithdrawals)?> wazi</span></div>
+<?php if($withdrawalError):?><div class="err">Jedwali la withdrawals halijapatikana. Tekeleza SQL migration ya <b>supabase-withdrawal-flow-migration.sql</b> kwanza.</div><?php endif?>
+<?php if(!$openWithdrawals):?><div class="empty">Hakuna withdrawal inayosubiri.</div><?php endif?>
+<div class="user-list">
+<?php foreach($openWithdrawals as $w):$wUser=null;foreach($allUsers as $candidate){if(($candidate['uid']??'')===($w['user_id']??'')){$wUser=$candidate;break;}}$wst=strtolower((string)($w['status']??'pending'));$wm=(string)($w['method']??'phone');$wmLabel=['phone'=>'Simu','visa'=>'Visa','paypal'=>'PayPal'][$wm]??$wm;?>
+<article class="user-card"><div class="user-top"><div class="user-main"><h3 class="user-name"><?=h((string)($wUser['name']??'User'))?> <span class="badge <?=$wst==='approved'?'exchange':'activation'?>"><?=h(strtoupper($wst))?></span></h3>
+<div class="meta"><?=h((string)($wUser['email']??''))?> · <?=h($wmLabel)?>: <b><?=h((string)($w['account_number']??''))?></b></div>
+<div class="status-line">Kiasi: <b>$<?=number_format((float)$w['amount'],2)?></b> <span style="color:#8295aa">(TZS <?=number_format((float)$w['amount']*2600,0)?>)</span> · Tarehe: <?=h(date('d/m/Y H:i',strtotime((string)$w['created_at'])))?> · #<?=h((string)$w['id'])?></div></div></div>
+<div class="actions">
+<?php if($wst==='pending'):?><form method="post" action="/admin/action.php" onsubmit="return confirm('Kubali withdrawal hii ya $<?=number_format((float)$w['amount'],2)?>?')"><input type="hidden" name="csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="withdrawal_set"><input type="hidden" name="withdrawal_id" value="<?=h((string)$w['id'])?>"><input type="hidden" name="status" value="approved"><button class="btn btn-blue">APPROVE</button></form><?php endif?>
+<form method="post" action="/admin/action.php" onsubmit="return confirm('Umeshalipa $<?=number_format((float)$w['amount'],2)?> kwa user huyu? Status itakuwa PAID.')"><input type="hidden" name="csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="withdrawal_set"><input type="hidden" name="withdrawal_id" value="<?=h((string)$w['id'])?>"><input type="hidden" name="status" value="paid"><button class="btn btn-green">MARK AS PAID</button></form>
+<form method="post" action="/admin/action.php" onsubmit="return confirm('Ukireject, $<?=number_format((float)$w['amount'],2)?> itarudishwa kwenye balance ya user. Endelea?')"><input type="hidden" name="csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="withdrawal_set"><input type="hidden" name="withdrawal_id" value="<?=h((string)$w['id'])?>"><input type="hidden" name="status" value="rejected"><button class="btn btn-red">REJECT + REFUND</button></form>
+</div></article><?php endforeach?>
+</div>
+<?php if($doneWithdrawals):?><h3 style="font-size:15px;margin:18px 0 8px;color:#9fb0c2">Zilizokamilika hivi karibuni</h3>
+<div class="meta"><?php foreach($doneWithdrawals as $w):$wUser=null;foreach($allUsers as $candidate){if(($candidate['uid']??'')===($w['user_id']??'')){$wUser=$candidate;break;}}?>
+<div>#<?=h((string)$w['id'])?> · <?=h((string)($wUser['name']??'User'))?> · $<?=number_format((float)$w['amount'],2)?> · <span class="badge <?=($w['status']??'')==='paid'?'active':'banned'?>"><?=h(strtoupper((string)$w['status']))?></span> · <?=h(date('d/m/Y H:i',strtotime((string)($w['updated_at']??$w['created_at']))))?></div>
+<?php endforeach?></div><?php endif?>
+</section>
 <section class="panel" id="users">
 <div class="panel-head"><h2>Watumiaji</h2><span class="small" style="color:#8295aa"><?=count($users)?> wanaoonekana</span></div>
 <form class="search" method="get"><input class="input" name="q" placeholder="Tafuta jina, email, UID au referral code" value="<?=h($q)?>"><button class="btn btn-blue">Tafuta</button><?php if($q!==''):?><a class="btn btn-dark" href="/admin/">Safisha</a><?php endif?></form>
