@@ -115,7 +115,7 @@ $managedVideoIdsJson=json_encode($managedVideoIds,JSON_HEX_TAG|JSON_HEX_APOS|JSO
 
     const managedVideoIds = new Set(<?php echo $managedVideoIdsJson; ?>);
     const managedVideos = <?php echo $managedVideoListJson; ?>;
-    const allVideos = [...managedVideos, ...legacyVideos.filter(video => !managedVideoIds.has(video.id))];
+    const allVideos = [...managedVideos, ...legacyVideos.filter(video => /^[A-Za-z0-9_-]{11}$/.test(video.id) && !managedVideoIds.has(video.id))];
     let availableVideos = [...allVideos];
     const maxDaily = 50;
     const rewardAmount = 3.4;
