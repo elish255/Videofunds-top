@@ -43,6 +43,31 @@ try{
  if($action==='balance'){if($uid==='')throw new RuntimeException('UID inahitajika');$kind=$_POST['kind']??'';$amount=round((float)($_POST['amount']??0),2);if(!in_array($kind,['credit','debit'],true)||$amount<=0||$amount>1000000)throw new RuntimeException('Kiasi si sahihi');$p=get_user($uid)['profile'];$old=(float)($p['balance']??0);if($kind==='debit'&&$amount>$old)throw new RuntimeException('Balance haitoshi kwa punguzo hilo.');$new=$kind==='credit'?$old+$amount:$old-$amount;sb_request('PATCH','/rest/v1/vf_profiles?id=eq.'.rawurlencode($uid),['balance'=>$new,'updated_at'=>date('c')],true,null,['Prefer: return=minimal']);sb_request('POST','/rest/v1/vf_transactions',[['user_id'=>$uid,'type'=>$kind==='credit'?'admin_credit':'admin_debit','amount'=>$kind==='credit'?$amount:-$amount,'description'=>'Admin '.($kind==='credit'?'added':'reduced').' balance','reference'=>'ADM-'.bin2hex(random_bytes(10))]],true,null,['Prefer: return=minimal']);header('Location: /admin/?updated=1');exit;}
  if($action==='delete_many'){$uids=$_POST['uids']??[];if(!is_array($uids)||!$uids)throw new RuntimeException('Hakuna account iliyochaguliwa');$uids=array_values(array_filter(array_map('trim',$uids),fn($v)=>$v!==''&&preg_match('/^[0-9a-fA-F-]{20,}$/',$v)));if(!$uids)throw new RuntimeException('UID haziko sahihi');foreach($uids as $id)sb_request('DELETE','/auth/v1/admin/users/'.rawurlencode($id),null,true,null);header('Location: /admin/?deleted=1');exit;}
  if($action==='notify_all'||$action==='notify_one'){$title=trim($_POST['title']??'');$body=trim($_POST['body']??'');if($title===''||$body==='')throw new RuntimeException('Kichwa na ujumbe vinahitajika');$rows=[];if($action==='notify_one'){if($uid==='')throw new RuntimeException('UID inahitajika');$rows[]=['user_id'=>$uid,'title'=>$title,'body'=>$body];}else{$users=sb_request('GET','/rest/v1/vf_profiles?select=id&limit=1000')['data']??[];foreach($users as $u)$rows[]=['user_id'=>$u['id'],'title'=>$title,'body'=>$body];}if($rows)sb_request('POST','/rest/v1/vf_notifications',$rows,true,null,['Prefer: return=minimal']);header('Location: /admin/?sent=1');exit;}
+ if(in_array($action,['manual_payment_approve','manual_payment_reject'],true)){
+  $rid=trim((string)($_POST['request_id']??''));if($rid===''||!ctype_digit($rid))throw new RuntimeException('Ombi la malipo si sahihi.');
+  $r=sb_request('GET','/rest/v1/vf_manual_payment_requests?select=*&id=eq.'.rawurlencode($rid).'&limit=1');$request=$r['data'][0]??null;
+  if(!$request)throw new RuntimeException('Ombi halijapatikana.');
+  if(($request['status']??'')!=='pending')throw new RuntimeException('Ombi hili tayari limeshughulikiwa.');
+  $stage=(string)$request['stage'];$uid=(string)$request['user_id'];$profile=get_user($uid)['profile'];
+  if(!in_array($stage,['activation','exchange','tax'],true))throw new RuntimeException('Hatua ya malipo si sahihi.');
+  if($action==='manual_payment_approve'){
+   if($stage==='exchange'&&($profile['activation_payment_status']??'')!=='paid')throw new RuntimeException('Activation haijathibitishwa.');
+   if($stage==='tax'&&(($profile['activation_payment_status']??'')!=='paid'||($profile['exchange_payment_status']??'')!=='paid'))throw new RuntimeException('Hatua zilizotangulia hazijathibitishwa.');
+   $next=['activation'=>'exchange','exchange'=>'tax','tax'=>'completed'][$stage];$membership=['activation'=>'EXCHANGE','exchange'=>'TAX','tax'=>'TAX'][$stage];
+   $updates=[$stage.'_payment_status'=>'paid',$stage.'_payment_reference'=>'MANUAL-'.$rid,$stage.'_paid_at'=>date('c'),'withdrawal_flow_stage'=>$next,'membership'=>$membership,'updated_at'=>date('c')];if($stage==='activation')$updates['activated']=true;
+   sb_request('PATCH','/rest/v1/vf_profiles?id=eq.'.rawurlencode($uid),$updates,true,null,['Prefer: return=minimal']);
+   sb_request('PATCH','/rest/v1/vf_manual_payment_requests?id=eq.'.rawurlencode($rid),['status'=>'approved','reviewed_at'=>date('c')],true,null,['Prefer: return=minimal']);
+   sb_request('POST','/rest/v1/vf_notifications',[['user_id'=>$uid,'title'=>'Malipo yamethibitishwa','body'=>'Admin amethibitisha malipo ya '.$stage.'. Unaweza kuendelea na hatua inayofuata.']],true,null,['Prefer: return=minimal']);
+   audit('manual_payment_approved',$uid,['request_id'=>$rid,'stage'=>$stage]);
+  }else{
+   $updates=[$stage.'_payment_status'=>'unpaid',$stage.'_payment_reference'=>null,$stage.'_paid_at'=>null,'withdrawal_flow_stage'=>$stage,'membership'=>strtoupper($stage),'updated_at'=>date('c')];if($stage==='activation')$updates['activated']=false;
+   sb_request('PATCH','/rest/v1/vf_profiles?id=eq.'.rawurlencode($uid),$updates,true,null,['Prefer: return=minimal']);
+   sb_request('PATCH','/rest/vf_manual_payment_requests?id=eq.'.rawurlencode($rid),['status'=>'rejected','reviewed_at'=>date('c')],true,null,['Prefer: return=minimal']);
+   sb_request('POST','/rest/v1/vf_notifications',[['user_id'=>$uid,'title'=>'Malipo hayajathibitishwa','body'=>'Malipo ya '.$stage.' hayajathibitishwa. Tafadhali lipia tena na utume taarifa upya.']],true,null,['Prefer: return=minimal']);
+   audit('manual_payment_rejected',$uid,['request_id'=>$rid,'stage'=>$stage]);
+  }
+  header('Location: /admin/?updated=1#manual-payments');exit;
+ }
  throw new RuntimeException('Action haijulikani');
 }catch(Throwable $e){http_response_code(400);echo '<!doctype html><meta charset="utf-8"><body style="font-family:Arial;background:#06101d;color:white;padding:25px"><h2>Admin action failed</h2><p>'.h($e->getMessage()).'</p><a style="color:#55e0c2" href="/admin/">Rudi Admin</a></body>';}
 ?>
