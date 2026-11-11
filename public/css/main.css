@@ -96,3 +96,46 @@
     color: rgba(0, 0, 0, 0.6);
     text-shadow: 2px 8px 6px rgba(0, 0, 0, 0.2), 0px -5px 35px rgba(255, 255, 255, 0.3);
 }
+
+button:not(.navbar-toggler):not(.vf-support-close),
+.btn,
+input[type="button"],
+input[type="submit"] {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 9px;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+    transition: filter .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+button:not(:disabled):not(.navbar-toggler):hover,
+.btn:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover {
+    filter: brightness(.94);
+    box-shadow: 0 3px 10px rgba(25, 35, 50, .16);
+}
+
+button:focus-visible,
+.btn:focus-visible,
+input[type="button"]:focus-visible,
+input[type="submit"]:focus-visible {
+    outline: 3px solid rgba(30, 107, 214, .55);
+    outline-offset: 2px;
+}
+
+button:disabled,
+.btn.disabled,
+input:disabled {
+    opacity: .58;
+    cursor: not-allowed;
+}
