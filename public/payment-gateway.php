@@ -21,7 +21,7 @@ function sp_complete(array $payment,?string $providerRef): void {
   $stage=(string)$payment['stage'];$uid=(string)$payment['user_id'];
   $profile=sb_profile($uid);$field=$stage.'_payment_status';$refField=$stage.'_payment_reference';
   if(($profile[$field]??'')==='paid') return;
-  $next=['activation'=>'exchange','exchange'=>'tax','tax'=>'withdrawal_processing'][$stage];
+  $next=['activation'=>'exchange','exchange'=>'tax','tax'=>'completed'][$stage];
   $membershipAfter=['activation'=>'EXCHANGE','exchange'=>'TAX','tax'=>'TAX'][$stage];
   $updates=[$field=>'paid',$refField=>$payment['order_id'],$stage.'_paid_at'=>date('c'),'withdrawal_flow_stage'=>$next,'membership'=>$membershipAfter];
   if($stage==='activation') $updates['activated']=true;
@@ -36,7 +36,7 @@ try {
     $stage=(string)($input['stage']??'');$phone=preg_replace('/\D+/','',(string)($input['phone']??''));
     if(!isset($amounts[$stage])) sp_out(400,['message'=>'Aina ya malipo si sahihi.']);
     if(!preg_match('/^255[0-9]{9}$/',$phone)) sp_out(400,['message'=>'Weka namba sahihi ya Tanzania, mfano 255712345678.']);
-    $profile=sb_profile($uid);vf_demo_require_balance($profile);
+    $profile=sb_profile($uid);
     if($stage==='exchange' && ($profile['activation_payment_status']??'')!=='paid') sp_out(403,['message'=>'Kamilisha activation kwanza.']);
     if($stage==='tax' && (($profile['activation_payment_status']??'')!=='paid'||($profile['exchange_payment_status']??'')!=='paid')) sp_out(403,['message'=>'Kamilisha hatua zilizotangulia kwanza.']);
     if(($profile[$stage.'_payment_status']??'')==='paid') sp_out(409,['message'=>'Hatua hii tayari imelipiwa.']);

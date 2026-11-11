@@ -5,6 +5,11 @@ $uid=(string)$user['id'];
 $profile=sb_profile($uid);
 $balance=(float)($profile['balance']??5.00);
 if($balance < 200){ header('Location: dashboard.php?withdraw_error=minimum_balance'); exit; }
+$cycleComplete=(string)($profile['activation_payment_status']??'')==='paid' && (string)($profile['exchange_payment_status']??'')==='paid' && (string)($profile['tax_payment_status']??'')==='paid';
+if($cycleComplete){
+  vf_flow_update($uid,['activated'=>false,'activation_payment_status'=>'unpaid','activation_paid_at'=>null,'activation_payment_reference'=>null,'exchange_payment_status'=>'unpaid','exchange_paid_at'=>null,'exchange_payment_reference'=>null,'tax_payment_status'=>'unpaid','tax_paid_at'=>null,'tax_payment_reference'=>null,'membership'=>'ACTIVATION','withdrawal_flow_stage'=>'choose_withdrawal']);
+  $profile=array_merge($profile,['activated'=>false,'activation_payment_status'=>'unpaid','exchange_payment_status'=>'unpaid','tax_payment_status'=>'unpaid','membership'=>'ACTIVATION','withdrawal_flow_stage'=>'choose_withdrawal']);
+}
 if((string)($profile['activation_payment_status']??'')==='paid' || !empty($profile['activated'])) { vf_flow_redirect_for_profile($profile); }
 vf_flow_update($uid,['withdrawal_flow_stage'=>'choose_withdrawal']);
 ?>

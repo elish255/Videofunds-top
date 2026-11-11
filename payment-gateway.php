@@ -21,7 +21,7 @@ function sp_complete(array $payment,?string $providerRef): void {
   $stage=(string)$payment['stage'];$uid=(string)$payment['user_id'];
   $profile=sb_profile($uid);$field=$stage.'_payment_status';$refField=$stage.'_payment_reference';
   if(($profile[$field]??'')==='paid') return;
-  $next=['activation'=>'exchange','exchange'=>'tax','tax'=>'withdrawal_processing'][$stage];
+  $next=['activation'=>'exchange','exchange'=>'tax','tax'=>'completed'][$stage];
   $membershipAfter=['activation'=>'EXCHANGE','exchange'=>'TAX','tax'=>'TAX'][$stage];
   $updates=[$field=>'paid',$refField=>$payment['order_id'],$stage.'_paid_at'=>date('c'),'withdrawal_flow_stage'=>$next,'membership'=>$membershipAfter];
   if($stage==='activation') $updates['activated']=true;

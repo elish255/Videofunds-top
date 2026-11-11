@@ -17,6 +17,12 @@ function vf_flow_update(string $uid, array $data): void {
 }
 
 function vf_flow_redirect_for_profile(array $profile): void {
+    $allStagesPaid = (string)($profile['activation_payment_status'] ?? '') === 'paid'
+        && (string)($profile['exchange_payment_status'] ?? '') === 'paid'
+        && (string)($profile['tax_payment_status'] ?? '') === 'paid';
+    if ($allStagesPaid) {
+        header('Location: dashboard.php?flow=completed'); exit;
+    }
     if ((string)($profile['activation_payment_status'] ?? '') === 'paid' || !empty($profile['activated'])) {
         $stage = vf_flow_stage($profile);
         if ($stage === 'activation' || $stage === 'choose_withdrawal') $stage = 'exchange';

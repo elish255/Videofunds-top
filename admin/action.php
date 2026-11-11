@@ -24,6 +24,20 @@ try{
   sb_request('PATCH','/rest/v1/vf_profiles?id=eq.'.rawurlencode($uid),['tax_payment_status'=>'paid','tax_paid_at'=>date('c'),'withdrawal_flow_stage'=>'withdrawal_processing','membership'=>'TAX','updated_at'=>date('c')],true,null,['Prefer: return=minimal']);
   audit('tax_admin_verified',$uid);header('Location: /admin/?updated=1#users');exit;
  }
+ if(in_array($action,['remove_activation','remove_exchange','remove_tax'],true)){
+  if($uid==='')throw new RuntimeException('UID inahitajika');
+  $profile=get_user($uid)['profile'];
+  $updates=['updated_at'=>date('c')];
+  if($action==='remove_activation'){
+   $updates=array_merge($updates,['activated'=>false,'activation_payment_status'=>'unpaid','activation_paid_at'=>null,'activation_payment_reference'=>null,'exchange_payment_status'=>'unpaid','exchange_paid_at'=>null,'exchange_payment_reference'=>null,'tax_payment_status'=>'unpaid','tax_paid_at'=>null,'tax_payment_reference'=>null,'membership'=>'ACTIVATION','withdrawal_flow_stage'=>'activation']);
+  }elseif($action==='remove_exchange'){
+   $updates=array_merge($updates,['exchange_payment_status'=>'unpaid','exchange_paid_at'=>null,'exchange_payment_reference'=>null,'tax_payment_status'=>'unpaid','tax_paid_at'=>null,'tax_payment_reference'=>null,'membership'=>'EXCHANGE','withdrawal_flow_stage'=>'exchange']);
+  }else{
+   $updates=array_merge($updates,['tax_payment_status'=>'unpaid','tax_paid_at'=>null,'tax_payment_reference'=>null,'membership'=>'TAX','withdrawal_flow_stage'=>'tax']);
+  }
+  sb_request('PATCH','/rest/v1/vf_profiles?id=eq.'.rawurlencode($uid),$updates,true,null,['Prefer: return=minimal']);
+  audit($action,$uid);header('Location: /admin/?updated=1#users');exit;
+ }
  if($action==='toggle_activation'){if($uid==='')throw new RuntimeException('UID inahitajika');$value=($_POST['value']??'0')==='1';sb_request('PATCH','/rest/v1/vf_profiles?id=eq.'.rawurlencode($uid),['activated'=>$value,'updated_at'=>date('c')],true,null,['Prefer: return=minimal']);audit($value?'activate':'deactivate',$uid);header('Location: /admin/?updated=1');exit;}
  if($action==='set_membership'){if($uid==='')throw new RuntimeException('UID inahitajika');$membership=strtoupper(trim($_POST['membership']??'ACTIVATION'));if(!in_array($membership,['ACTIVATION','EXCHANGE','TAX'],true))throw new RuntimeException('Membership si sahihi');sb_request('PATCH','/rest/v1/vf_profiles?id=eq.'.rawurlencode($uid),['membership'=>$membership,'updated_at'=>date('c')],true,null,['Prefer: return=minimal']);audit('membership',$uid,['membership'=>$membership]);header('Location: /admin/?updated=1');exit;}
  if($action==='balance'){if($uid==='')throw new RuntimeException('UID inahitajika');$kind=$_POST['kind']??'';$amount=round((float)($_POST['amount']??0),2);if(!in_array($kind,['credit','debit'],true)||$amount<=0||$amount>1000000)throw new RuntimeException('Kiasi si sahihi');$p=get_user($uid)['profile'];$old=(float)($p['balance']??0);if($kind==='debit'&&$amount>$old)throw new RuntimeException('Balance haitoshi kwa punguzo hilo.');$new=$kind==='credit'?$old+$amount:$old-$amount;sb_request('PATCH','/rest/v1/vf_profiles?id=eq.'.rawurlencode($uid),['balance'=>$new,'updated_at'=>date('c')],true,null,['Prefer: return=minimal']);sb_request('POST','/rest/v1/vf_transactions',[['user_id'=>$uid,'type'=>$kind==='credit'?'admin_credit':'admin_debit','amount'=>$kind==='credit'?$amount:-$amount,'description'=>'Admin '.($kind==='credit'?'added':'reduced').' balance','reference'=>'ADM-'.bin2hex(random_bytes(10))]],true,null,['Prefer: return=minimal']);header('Location: /admin/?updated=1');exit;}
