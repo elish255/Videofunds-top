@@ -118,11 +118,19 @@ input[type="submit"] {
 }
 
 button:not(:disabled):not(.navbar-toggler):hover,
-.btn:hover,
-input[type="button"]:hover,
-input[type="submit"]:hover {
+.btn:not(:disabled):not(.disabled):hover,
+input[type="button"]:not(:disabled):hover,
+input[type="submit"]:not(:disabled):hover {
     filter: brightness(.94);
     box-shadow: 0 3px 10px rgba(25, 35, 50, .16);
+    transform: translateY(-2px);
+}
+
+button:not(:disabled):not(.navbar-toggler):active,
+.btn:not(:disabled):not(.disabled):active,
+input[type="button"]:not(:disabled):active,
+input[type="submit"]:not(:disabled):active {
+    transform: translateY(0) scale(.98);
 }
 
 button:focus-visible,
@@ -138,4 +146,9 @@ button:disabled,
 input:disabled {
     opacity: .58;
     cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button, .btn, input[type="button"], input[type="submit"] { transition: none !important; }
+    button:hover, .btn:hover, input[type="button"]:hover, input[type="submit"]:hover { transform: none !important; }
 }

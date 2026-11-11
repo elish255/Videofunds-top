@@ -60,12 +60,20 @@ $isAdmin = !empty($profile['is_admin']);
     <style>
         .valname { font-size: 18px; font-weight: bold; color: #533651; }
         .valval { font-size: 22px; font-weight: bold; color: blue; }
-        .btn-watch, .btn-withdraw { font-size: 1.05rem; padding: 12px 14px; }
+        .dashboard-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:0 0 16px; }
+        .dashboard-actions .btn { width:100%; min-height:56px; margin:0; padding:12px 16px; border:0; border-radius:12px; font-weight:700; line-height:1.25; white-space:normal; box-shadow:0 4px 12px rgba(20,35,55,.12); transition:transform .18s ease, box-shadow .18s ease, filter .18s ease; }
+        .dashboard-actions .btn:hover { transform:translateY(-2px); filter:brightness(.95); box-shadow:0 8px 18px rgba(20,35,55,.2); }
+        .dashboard-actions .btn:active { transform:translateY(0) scale(.985); }
+        .dashboard-actions .btn:focus-visible { outline:3px solid #68162e; outline-offset:3px; }
+        .activation-status { display:flex; align-items:center; justify-content:center; width:75%; min-height:56px; padding:12px; border-radius:12px; color:#fff; font-size:1.2rem; font-weight:700; text-align:center; cursor:default; }
+        .activation-status-active { background:#28a745; }
+        .activation-status-inactive { background:#c92121; }
         .navbar { z-index: 1030; }
         .navbar .nav-link { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:8px; transition:background-color .18s ease,color .18s ease; }
         .navbar .nav-link:hover, .navbar .nav-link:focus { background:#814B5E; color:#fff !important; text-decoration:none; }
-        .navbar-toggler { border:1px solid rgba(255,255,255,.55); border-radius:8px; padding:7px 10px; outline:none !important; }
-        .navbar-toggler .fa-bars { color:#fff; }
+        .navbar-toggler { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; border:1px solid rgba(255,255,255,.55); border-radius:8px; padding:7px 10px; color:#fff; }
+        .navbar-toggler svg { display:block; width:21px; height:21px; }
+        .navbar-toggler:focus-visible { outline:3px solid #fff; outline-offset:3px; }
         .navbar-brand { white-space:nowrap; }
         .vf-notifications { max-width:900px; margin:12px auto 18px; text-align:left; }
         .vf-notification { position:relative; background:#fff; border:1px solid #e3e8ef; border-left:5px solid #9aa7b5; border-radius:10px; padding:13px 15px; margin:9px 0; box-shadow:0 3px 12px rgba(20,35,55,.06); }
@@ -78,7 +86,10 @@ $isAdmin = !empty($profile['is_admin']);
         .vf-notification-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
         .vf-notification-actions button { margin:0; }
         .vf-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:38px; padding:8px 13px; border:0; border-radius:7px; color:#fff; cursor:pointer; text-decoration:none; transition:background-color .18s ease, box-shadow .18s ease; }
-        .vf-btn:hover,.vf-btn:focus { color:#fff; text-decoration:none; filter:brightness(.92); box-shadow:0 2px 7px rgba(0,0,0,.16); }
+        .vf-btn:hover,.vf-btn:focus-visible { color:#fff; text-decoration:none; filter:brightness(.92); box-shadow:0 3px 10px rgba(0,0,0,.18); transform:translateY(-2px); }
+        .vf-btn:active { transform:translateY(0) scale(.98); }
+        .vf-btn:focus-visible { outline:3px solid #68162e; outline-offset:3px; }
+        @media (prefers-reduced-motion: reduce) { .vf-btn,.dashboard-actions .btn { transition:none; } .vf-btn:hover,.dashboard-actions .btn:hover { transform:none; } }
         .vf-btn-read { background:#1767c5; } .vf-btn-dismiss { background:#64748b; }
         .vf-empty-notifications { color:#68778a; background:#f7f9fc; border-radius:9px; padding:13px; }
         @media (max-width: 991.98px) {
@@ -89,7 +100,9 @@ $isAdmin = !empty($profile['is_admin']);
         @media (max-width: 575.98px) {
             body { padding-top:72px; }
             header .font9 { font-size:1.55rem !important; }
-            .btn-watch,.btn-withdraw { width:100% !important; font-size:1rem; }
+            .dashboard-actions { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+            .dashboard-actions .btn { min-height:54px; padding:10px 8px; font-size:.95rem; }
+            .activation-status { min-height:54px; }
             .vf-notification { padding:12px; }
         }
     </style>
@@ -100,16 +113,16 @@ $isAdmin = !empty($profile['is_admin']);
     <div class="container">
         <a class="navbar-brand" href="./"><span class="font9" style="font-weight:bold;font-size:27px;color:#fff;">Videofunds</span></a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Fungua menyu">
-            <i class="fa fa-bars" aria-hidden="true"></i>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <div class="collapse navbar-collapse" id="navbarResponsive">
             <ul class="navbar-nav ml-auto">
-                <li class="nav-item"><a class="nav-link" href="./"><i class="fa fa-home" aria-hidden="true"></i> Main</a></li>
-                <li class="nav-item"><a class="nav-link" href="dashboard.php"><i class="fa fa-user-circle" aria-hidden="true"></i> User Area</a></li>
-                <li class="nav-item"><a class="nav-link" href="leaderboard.php"><i class="fa fa-trophy" aria-hidden="true"></i> Leaderboard</a></li>
-                <?php if ($isAdmin): ?><li class="nav-item"><a class="nav-link" href="/admin/" style="font-weight:bold;color:#ffd700;"><i class="fa fa-user-shield" aria-hidden="true"></i> Admin Panel</a></li><?php endif; ?>
-                <li class="nav-item"><a class="nav-link" href="logout.php"><i class="fa fa-sign-out-alt" aria-hidden="true"></i> Logout</a></li>
-                <li class="nav-item"><a class="nav-link" href="#" onclick="return false;"><i class="fa fa-question-circle" aria-hidden="true"></i> Support</a></li>
+                <li class="nav-item"><a class="nav-link" href="./">Main</a></li>
+                <li class="nav-item"><a class="nav-link" href="dashboard.php">User Area</a></li>
+                <li class="nav-item"><a class="nav-link" href="leaderboard.php">Leaderboard</a></li>
+                <?php if ($isAdmin): ?><li class="nav-item"><a class="nav-link" href="/admin/" style="font-weight:bold;color:#ffd700;">Admin Panel</a></li><?php endif; ?>
+                <li class="nav-item"><a class="nav-link" href="logout.php">Logout</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" id="vfNavSupport">Support</a></li>
             </ul>
         </div>
     </div>
@@ -118,7 +131,7 @@ $isAdmin = !empty($profile['is_admin']);
 <?php if (!empty($notifications)): ?>
 <section class="container vf-notifications" aria-label="Notifications">
     <div class="d-flex align-items-center justify-content-between flex-wrap mb-2">
-        <strong><i class="fa fa-bell" aria-hidden="true"></i> Notifications
+        <strong>Notifications
             <?php if ($unreadNotifications > 0): ?><span class="vf-unread-count"><?= (int)$unreadNotifications ?> unread</span><?php endif; ?>
         </strong>
     </div>
@@ -131,8 +144,8 @@ $isAdmin = !empty($profile['is_admin']);
             </div>
             <div class="vf-notification-body" hidden><?= nl2br(htmlspecialchars((string)$notification['body'], ENT_QUOTES, 'UTF-8')) ?></div>
             <div class="vf-notification-actions">
-                <button type="button" class="vf-btn vf-btn-read js-open-notification"><i class="fa fa-book-open" aria-hidden="true"></i> Fungua / Soma</button>
-                <button type="button" class="vf-btn vf-btn-dismiss js-dismiss-notification" hidden><i class="fa fa-times" aria-hidden="true"></i> Dismiss</button>
+                <button type="button" class="vf-btn vf-btn-read js-open-notification">Fungua / Soma</button>
+                <button type="button" class="vf-btn vf-btn-dismiss js-dismiss-notification" hidden>Dismiss</button>
             </div>
         </article>
     <?php endforeach; ?>
@@ -158,12 +171,11 @@ $isAdmin = !empty($profile['is_admin']);
             <div class="form-group">
                 <label class="font9 valname">Earned money</label><br>
                 <font class="font9 valval">$ <?php echo number_format($balance, 2); ?> &nbsp;&nbsp;(<?php echo $localSymbol . ' ' . number_format($balance * $rate, 2); ?>)</font><br>
-                <table border="0" width="100%">
-                    <tr>
-                        <td width='50%'><a class="btn btn-primary btn-lg w-75 btn-withdraw" href="choosepayment.php">Withdraw money</a></td>
-                        <td width='50%'><a class="btn btn-primary btn-lg w-75 btn-watch" href="watch-video.php">Watch paid videos</a></td>
-                    </tr>
-                </table>
+                    <div class="dashboard-actions">
+                        <a class="btn btn-primary btn-withdraw" href="choosepayment.php">Withdraw money</a>
+                        <a class="btn btn-primary btn-watch" href="watch-video.php">Watch paid videos</a>
+                    </div>
+
                 <hr>
             </div>
 
@@ -181,9 +193,9 @@ $isAdmin = !empty($profile['is_admin']);
             <!-- Activation button - changes based on Firestore -->
             <div class="form-group">
                 <?php if ($activated === true): ?>
-                    <a class="btn btn-success btn-lg w-75" href="#" style="background-color: #28a745; cursor: default; color: white;">✅ Activated</a>
+                    <div class="activation-status activation-status-active" role="status">Activated</div>
                 <?php else: ?>
-                    <a class="btn btn-danger btn-lg w-75" href="#" style="background-color: #c92121; cursor: default; color: white;">❌ Not Activated</a>
+                    <div class="activation-status activation-status-inactive" role="status">Not Activated</div>
                 <?php endif; ?>
                 <hr>
             </div>
@@ -263,7 +275,7 @@ $isAdmin = !empty($profile['is_admin']);
         openButton.addEventListener('click', async function() {
             if (body.hidden) {
                 body.hidden = false;
-                openButton.innerHTML = '<i class="fa fa-eye-slash" aria-hidden="true"></i> Funga ujumbe';
+                openButton.textContent = 'Funga ujumbe';
                 dismissButton.hidden = false;
                 if (card.classList.contains('unread')) {
                     try {
@@ -289,7 +301,7 @@ $isAdmin = !empty($profile['is_admin']);
                 }
             } else {
                 body.hidden = true;
-                openButton.innerHTML = '<i class="fa fa-book-open" aria-hidden="true"></i> Fungua / Soma';
+                openButton.textContent = 'Fungua / Soma';
             }
         });
         dismissButton.addEventListener('click', async function() {
