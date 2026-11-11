@@ -3,8 +3,9 @@ require_once __DIR__ . ('/admin' === substr(__DIR__, -6) ? '/../runtime_bootstra
 require_once __DIR__.'/_lib.php';
 require_admin();
 
-$error=''; $users=[];
+$error=''; $users=[];$videoLibrary=[];$videoLibraryError='';
 try { $users=list_users(); } catch(Throwable $e) { $error=$e->getMessage(); }
+try { $videoLibrary=list_video_library(); } catch(Throwable $e) { $videoLibraryError=$e->getMessage(); }
 $allUsers=$users;
 $q=strtolower(trim($_GET['q']??''));
 if($q!==''){
@@ -31,6 +32,8 @@ $flash='';
 if(isset($_GET['sent'])) $flash='Ujumbe umetumwa kwa mafanikio.';
 if(isset($_GET['updated'])) $flash='Mabadiliko yamehifadhiwa.';
 if(isset($_GET['deleted'])) $flash='Akaunti imefutwa.';
+if(isset($_GET['video_added'])) $flash='Video imeongezwa na sasa inaonekana kwa watumiaji.';
+if(isset($_GET['video_updated'])) $flash='Hali ya video imebadilishwa.';
 ?>
 <!doctype html>
 <html lang="sw">
@@ -40,6 +43,7 @@ if(isset($_GET['deleted'])) $flash='Akaunti imefutwa.';
 <style>
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:#06101d;color:#edf4fb}
 body{overflow-x:hidden}.app{min-height:100vh}.sidebar{position:fixed;left:0;top:0;bottom:0;width:310px;background:#1d6f5a;color:#fff;padding:28px 18px;overflow-y:auto;z-index:1000;transition:transform .25s ease}.brand{display:flex;align-items:center;gap:13px;padding:0 12px 30px}.logo{width:50px;height:50px;border-radius:50%;background:#06101d;display:grid;place-items:center;font-weight:900;font-size:17px;color:#17d1e0;border:3px solid #19bca9}.brand b{font-size:25px;line-height:1}.brand small{display:block;color:#d6f4ec;margin-top:6px;font-size:14px}.close{display:none;position:absolute;right:18px;top:18px;width:34px;height:34px;border-radius:50%;border:2px solid #19cfc0;background:transparent;color:#fff;font-size:20px}.section-title{font-size:12px;letter-spacing:3px;font-weight:800;color:#c3e8df;margin:18px 22px 10px}.nav{display:flex;flex-direction:column;gap:3px}.nav a{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 20px;border-radius:28px;color:#fff;text-decoration:none;font-weight:700}.nav a:hover,.nav a.active{background:rgba(255,255,255,.14)}.nav .left{display:flex;align-items:center;gap:13px}.ico{width:23px;text-align:center;font-size:20px}.count{min-width:36px;padding:7px 10px;border-radius:18px;background:rgba(255,255,255,.14);text-align:center;font-size:13px}.main{margin-left:310px;min-height:100vh;background:radial-gradient(circle at 80% 0,#10223b 0,#06101d 38%);padding:22px 28px 50px}.topbar{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:22px}.menu{display:none;background:#1d6f5a;color:#fff;border:0;border-radius:12px;padding:11px 14px;font-size:20px}.topbar h1{font-size:24px;margin:0}.topbar .right{display:flex;align-items:center;gap:10px}.logout{background:#0e1a2a;border:1px solid #25384f;color:#fff;text-decoration:none;padding:10px 15px;border-radius:12px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.stat{background:#0d1a29;border:1px solid #1c2c40;border-radius:18px;padding:18px}.stat .label{color:#9fb0c2;font-size:13px}.stat .num{font-size:27px;font-weight:900;margin-top:6px}.stat .sub{font-size:12px;color:#6fd8c3;margin-top:4px}.panel{background:#0c1827;border:1px solid #1d2d42;border-radius:22px;padding:18px;margin-bottom:18px;box-shadow:0 15px 40px rgba(0,0,0,.16)}.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.panel h2{margin:0;font-size:20px}.search{display:flex;gap:9px;flex-wrap:wrap}.search input{min-width:230px;flex:1}.input,.search input{background:#07111e;border:1px solid #26394f;color:#eef5fb;border-radius:12px;padding:12px 13px;outline:none}.btn{border:0;border-radius:12px;padding:11px 15px;color:#fff;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}.btn-blue{background:#1767c5}.btn-green{background:#08b9ba;color:#04222a}.btn-red{background:#c73545}.btn-dark{background:#07111e;border:1px solid #26394f}.btn-yellow{background:#d49718;color:#111}.flash{background:#0b553f;border:1px solid #1dbb88;color:#d9fff2;padding:12px 14px;border-radius:12px;margin-bottom:15px}.err{background:#5b2530;border:1px solid #bd4b5a;padding:12px 14px;border-radius:12px;margin-bottom:15px}.toolbar{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:15px}.bulk{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.user-list{display:grid;gap:14px}.user-card{background:#101e2d;border:1px solid #24364b;border-radius:22px;padding:17px}.user-top{display:flex;gap:12px;align-items:flex-start}.check{width:21px;height:21px;margin-top:3px}.user-main{flex:1;min-width:0}.user-name{font-size:20px;font-weight:900;margin:0 0 5px}.meta{color:#8799ad;font-size:13px;line-height:1.65}.status-line{margin-top:6px;color:#aebdcc;font-size:13px}.badge{display:inline-block;padding:4px 9px;border-radius:15px;font-size:11px;font-weight:900;margin-left:4px}.active{background:#123e32;color:#62e1bc}.banned{background:#4b2027;color:#ff8793}.activation{background:#253244;color:#c8d4df}.exchange{background:#4d3a0b;color:#ffd76a}.tax{background:#3c214d;color:#e5a7ff}.balance-row{display:grid;grid-template-columns:minmax(140px,1fr) auto auto;gap:9px;margin-top:14px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px;padding-top:13px;border-top:1px solid #213146}.actions form{margin:0}.small{font-size:12px}.empty{padding:28px;text-align:center;color:#8091a5}.drawer-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:900}.forms{display:grid;grid-template-columns:1fr 1fr;gap:14px}.form-card{background:#101e2d;border:1px solid #24364b;border-radius:17px;padding:15px}.form-card label{display:block;color:#aebdcc;font-size:13px;font-weight:700;margin:0 0 6px}.form-card input,.form-card textarea{width:100%;margin-bottom:10px}.form-card textarea{min-height:100px;resize:vertical}.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1200;place-items:center;padding:18px}.modal.show{display:grid}.modal-card{width:min(520px,100%);background:#101e2d;border:1px solid #2a3c53;border-radius:20px;padding:20px}.modal-card h3{margin-top:0}.modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:14px}@media(max-width:1050px){.stats{grid-template-columns:repeat(2,1fr)}.sidebar{width:280px}.main{margin-left:280px}}@media(max-width:780px){.sidebar{transform:translateX(-100%);width:min(310px,88vw)}.sidebar.open{transform:translateX(0)}.close{display:block}.drawer-backdrop.show{display:block}.main{margin-left:0;padding:16px 12px 40px}.menu{display:block}.topbar h1{font-size:19px}.stats{grid-template-columns:repeat(2,1fr);gap:9px}.stat{padding:14px}.stat .num{font-size:22px}.forms{grid-template-columns:1fr}.panel{padding:14px}.balance-row{grid-template-columns:1fr 1fr 1fr}.balance-row .input{grid-column:1/-1}.actions .btn{flex:1;min-width:120px}.user-name{font-size:18px}}@media(max-width:480px){.stats{grid-template-columns:1fr 1fr}.search input{min-width:100%}.balance-row{grid-template-columns:1fr 1fr}.balance-row .input{grid-column:1/-1}.actions .btn{min-width:calc(50% - 8px)}.topbar .logout{display:none}}
+.video-manager{display:grid;gap:15px}.video-manager-intro{margin:0;color:#91a4b8;line-height:1.55}.video-form{display:grid;grid-template-columns:minmax(180px,1fr) minmax(240px,1.5fr) auto;align-items:end;gap:12px;padding:16px;border:1px solid #22364c;background:#091522;border-radius:16px}.video-form label{display:grid;gap:7px;color:#b7c6d5;font-size:13px;font-weight:700}.video-form .input{width:100%;min-width:0}.video-library{display:grid;gap:10px}.video-entry{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:14px;padding:15px;border:1px solid #22364c;background:#091522;border-radius:14px}.video-entry-info{min-width:0}.video-entry-title{font-weight:750;overflow-wrap:anywhere}.video-entry-meta{color:#8295aa;font-size:12px;margin-top:4px}.video-entry-link{display:inline-block;color:#51d9c1;font-size:12px;margin-top:5px}.video-entry form{margin:0}.video-entry .btn{white-space:nowrap}@media(max-width:760px){.video-form{grid-template-columns:1fr}.video-entry{grid-template-columns:minmax(0,1fr) auto}.video-entry form{grid-column:1/-1}.video-entry form .btn{width:100%}}@media(max-width:480px){.video-entry{grid-template-columns:1fr}.video-entry form{grid-column:auto}.video-entry .badge{justify-self:start}}
 </style>
 </head>
 <body>
@@ -48,7 +52,7 @@ body{overflow-x:hidden}.app{min-height:100vh}.sidebar{position:fixed;left:0;top:
 <button class="close" onclick="closeMenu()">×</button>
 <div class="brand"><div class="logo">VF</div><div><b>Gochati</b><small>Admin Control</small></div></div>
 <div class="section-title">MWANZO</div>
-<nav class="nav"><a href="/admin/" class="active"><span class="left"><span class="ico">▦</span>Dashboard</span></a></nav>
+<nav class="nav"><a href="/admin/" class="active"><span class="left"><span class="ico">▦</span>Dashboard</span></a><a href="#videos"><span class="left"><span class="ico">▶</span>Video links</span><span class="count"><?=count($videoLibrary)?></span></a></nav>
 <div class="section-title">WATUMIAJI</div>
 <nav class="nav">
 <a href="#users"><span class="left"><span class="ico">♧</span>Total Referral</span><span class="count"><?=$totalReferral?></span></a>
@@ -81,6 +85,29 @@ body{overflow-x:hidden}.app{min-height:100vh}.sidebar{position:fixed;left:0;top:
 <div class="stat"><div class="label">Active users</div><div class="num"><?=$total-$banned?></div><div class="sub">Accounts zinazofanya kazi</div></div>
 <div class="stat"><div class="label">Flow Payments</div><div class="num"><?=count(array_filter($users,fn($u)=>(($u['exchange_payment_status']??'')==='paid')))?></div><div class="sub">Exchange paid</div></div>
 <div class="stat"><div class="label">Balance jumla</div><div class="num">TSh <?=number_format($totalBalance*2600,0)?></div><div class="sub">$<?=number_format($totalBalance,2)?></div></div>
+</section>
+<section class="panel" id="videos">
+<div class="panel-head"><h2>Video links</h2><span class="small" style="color:#8295aa"><?=count($videoLibrary)?> managed</span></div>
+<div class="video-manager">
+<p class="video-manager-intro">Ongeza kiungo au video ID ya YouTube. Video mpya huonekana kwenye ukurasa wa kutazama kwa watumiaji; unaweza pia kuzima na kuiwasha tena bila kuifuta.</p>
+<?php if($videoLibraryError):?><div class="err">Video library haikupatikana: <?=h($videoLibraryError)?></div><?php endif?>
+<form class="video-form" method="post" action="/admin/action.php">
+<input type="hidden" name="csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="video_add">
+<label for="video-title">Title<input class="input" id="video-title" name="title" maxlength="150" required placeholder="Mfano: Safari ya baharini"></label>
+<label for="video-url">YouTube URL au ID<input class="input" id="video-url" name="video_url" type="text" inputmode="url" maxlength="2048" required placeholder="https://youtu.be/… au video ID"></label>
+<button class="btn btn-green" type="submit">Ongeza video</button>
+</form>
+<div class="video-library">
+<?php if(!$videoLibrary):?><div class="empty">Bado hakuna viungo vilivyoongezwa na admin.</div><?php endif?>
+<?php foreach($videoLibrary as $video):$videoId=(string)($video['youtube_id']??'');$videoActive=!empty($video['is_active']);?>
+<article class="video-entry">
+<div class="video-entry-info"><div class="video-entry-title"><?=h((string)($video['title']??''))?></div><div class="video-entry-meta">ID: <?=h($videoId)?> · <?=h(date('d/m/Y H:i',strtotime((string)($video['created_at']??'now'))))?></div><a class="video-entry-link" href="https://youtu.be/<?=rawurlencode($videoId)?>" target="_blank" rel="noopener noreferrer">Fungua YouTube</a></div>
+<span class="badge <?=$videoActive?'active':'banned'?>"><?=$videoActive?'ACTIVE':'PAUSED'?></span>
+<form method="post" action="/admin/action.php"><input type="hidden" name="csrf" value="<?=h($csrf)?>"><input type="hidden" name="action" value="video_toggle"><input type="hidden" name="youtube_id" value="<?=h($videoId)?>"><input type="hidden" name="is_active" value="<?=$videoActive?'0':'1'?>"><button class="btn <?=$videoActive?'btn-red':'btn-green'?>" type="submit"><?=$videoActive?'Zima video':'Washa video'?></button></form>
+</article>
+<?php endforeach?>
+</div>
+</div>
 </section>
 <section class="panel" id="manual-payments">
 <div class="panel-head"><h2>Uthibitisho wa malipo ya LIPA NAMBA</h2><span class="small" style="color:#8295aa"><?=$pendingManual?> yanayosubiri</span></div>

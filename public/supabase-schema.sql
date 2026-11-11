@@ -17,6 +17,12 @@ create table if not exists public.vf_watched_videos (
  video_id text not null, video_title text not null default '', reward numeric(10,2) not null default 3.40 check(reward=3.40),
  watched_at timestamptz not null default now(), unique(user_id,video_id)
 );
+create table if not exists public.vf_video_library (
+ youtube_id text primary key check (youtube_id ~ '^[A-Za-z0-9_-]{11}$'),
+ title text not null check (char_length(btrim(title)) between 1 and 150),
+ is_active boolean not null default true,
+ created_at timestamptz not null default now()
+);
 create index if not exists vf_watched_videos_user_date_idx on public.vf_watched_videos(user_id,watched_at desc);
 create table if not exists public.vf_transactions (
  id bigint generated always as identity primary key, user_id uuid not null references public.vf_profiles(id) on delete cascade,
@@ -50,11 +56,15 @@ create table if not exists public.vf_referral_bonuses (
 -- Atomic reward claim: fixed $3.40, at least 70 seconds, max 50/day, unique user/video.
 create or replace function public.vf_claim_video_reward(p_video_id text,p_video_title text default '',p_watch_seconds integer default 0)
 returns jsonb language plpgsql security definer set search_path=public as $$
-declare v_uid uuid:=auth.uid(); v_balance numeric(14,2); v_count integer; v_today date:=current_date; v_reward constant numeric(10,2):=3.40;
+declare v_uid uuid:=auth.uid(); v_balance numeric(14,2); v_count integer; v_today date:=current_date; v_reward constant numeric(10,2):=3.40; v_catalog_title text;
 begin
  if v_uid is null then raise exception 'Not authenticated'; end if;
  if coalesce(trim(p_video_id),'')='' then raise exception 'Video ID is required'; end if;
  if coalesce(p_watch_seconds,0)<70 then raise exception 'Watch the video for at least 70 seconds'; end if;
+ select title into v_catalog_title from public.vf_video_library where youtube_id=p_video_id and is_active=true;
+ if found then p_video_title:=v_catalog_title;
+ elsif exists(select 1 from public.vf_video_library where youtube_id=p_video_id and is_active=false) then raise exception 'Video is no longer available';
+ end if;
  perform 1 from public.vf_profiles where id=v_uid and banned=false for update;
  if not found then raise exception 'Account unavailable'; end if;
  if exists(select 1 from public.vf_watched_videos where user_id=v_uid and video_id=p_video_id) then raise exception 'You have already watched this video'; end if;
@@ -67,6 +77,9 @@ begin
 end; $$;
 alter table public.vf_profiles enable row level security;
 alter table public.vf_watched_videos enable row level security;
+alter table public.vf_video_library enable row level security;
+revoke all on table public.vf_video_library from public, anon, authenticated;
+grant select, insert, update, delete on table public.vf_video_library to service_role;
 alter table public.vf_transactions enable row level security;
 alter table public.vf_withdrawals enable row level security;
 alter table public.vf_notifications enable row level security;

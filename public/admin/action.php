@@ -3,6 +3,22 @@ require_once __DIR__.'/../supabase.php';require_once __DIR__.'/_lib.php';require
 if($_SERVER['REQUEST_METHOD']!=='POST'){http_response_code(405);exit;}
 try{
  check_csrf(); $action=$_POST['action']??''; $uid=trim($_POST['uid']??'');
+ if($action==='video_add'){
+  $title=trim(strip_tags((string)($_POST['title']??'')));$titleLength=function_exists('mb_strlen')?mb_strlen($title,'UTF-8'):strlen($title);$videoId=youtube_video_id_from_input((string)($_POST['video_url']??''));
+  if($title===''||$titleLength>150)throw new RuntimeException('Weka kichwa cha video chenye herufi 1 hadi 150.');
+  if(!$videoId)throw new RuntimeException('Weka YouTube link sahihi ya watch, shorts, live, embed au video ID.');
+  $existing=sb_request('GET','/rest/v1/vf_video_library?select=youtube_id&youtube_id=eq.'.rawurlencode($videoId).'&limit=1');
+  if(!empty($existing['data']))throw new RuntimeException('Video hii tayari ipo kwenye orodha.');
+  sb_request('POST','/rest/v1/vf_video_library',[['youtube_id'=>$videoId,'title'=>$title,'is_active'=>true]],true,null,['Prefer: return=minimal']);
+  header('Location: /admin/?video_added=1#videos');exit;
+ }
+ if($action==='video_toggle'){
+  $videoId=trim((string)($_POST['youtube_id']??''));$value=(string)($_POST['is_active']??'');
+  if(!preg_match('/^[A-Za-z0-9_-]{11}$/',$videoId)||!in_array($value,['0','1'],true))throw new RuntimeException('Taarifa za video si sahihi.');
+  $updated=sb_request('PATCH','/rest/v1/vf_video_library?youtube_id=eq.'.rawurlencode($videoId),['is_active'=>$value==='1'],true,null,['Prefer: return=representation']);
+  if(empty($updated['data']))throw new RuntimeException('Video haikupatikana.');
+  header('Location: /admin/?video_updated=1#videos');exit;
+ }
  if(in_array($action,['ban','unban'],true)){if($uid==='')throw new RuntimeException('UID inahitajika');sb_request('PATCH','/rest/v1/vf_profiles?id=eq.'.rawurlencode($uid),['banned'=>$action==='ban','updated_at'=>date('c')],true,null,['Prefer: return=minimal']);audit($action,$uid);header('Location: /admin/?updated=1');exit;}
  if($action==='make_active'){
   if($uid==='')throw new RuntimeException('UID inahitajika');
