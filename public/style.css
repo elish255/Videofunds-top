@@ -1,0 +1,152 @@
+
+body {
+  font-family: Arial, sans-serif;
+  background: "images/background.jpg";
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.container {
+  background-color: darkred;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+  margin-bottom: 20px;
+  color: blue;
+}
+
+select {
+  width: 200px;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid #aaa;
+  font-size: 16px;
+}
+
+button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+   body {
+     font-family: Arial, sans-serif;
+     background-color: #f8f9fa;
+   }
+   
+   .navbar {
+     background-color: #68162e;
+   }
+   
+   .navbar-brand {
+     color: blue;
+     font-weight: bold;
+     font-size: 25px;
+   }
+   
+   .navbar-nav .nav-link {
+     color: white;
+   }
+   
+   .navbar-nav .nav-link:hover {
+     color: #00b3b3;
+   }
+   
+   .alert-wrapper {
+     position: fixed;
+     top: 0;
+     left: 0;
+     right: 0;
+     bottom: 0;
+     background-color: rgba(0, 0, 0, 0.5);
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     z-index: 9999;
+   }
+   
+   .alert-frame {
+     background-color: white;
+     padding: 20px;
+     border-radius: 10px;
+     max-width: 400px;
+     width: 120%;
+   }
+   
+   .alert-header {
+     background-color: #b43333;
+     color: white;
+     padding: 7px;
+     font-size: 1.5rem;
+     text-align: center;
+     border-radius: 5px;
+     margin-bottom: 15px;
+   }
+   
+   .alert-close {
+     position: absolute;
+     top: 10px;
+     right: 10px;
+     font-size: 20px;
+     cursor: pointer;
+   }
+   
+   .alert-body {
+     padding: 10px;
+     text-align: center;
+   }
+   
+   .alert-message {
+     font-size: 1rem;
+     margin-bottom: 20px;
+   }
+   
+   .question-buttons {
+     display: flex;
+     justify-content: center;
+     gap: 15px;
+   }
+   
+   .confirm-button {
+     padding: 10px 20px;
+     background-color: #28a745;
+     color: white;
+     border: none;
+     font-size: 1rem;
+     cursor: pointer;
+     border-radius: 5px;
+     transition: background-color 0.3s ease;
+   }
+   
+   .confirm-button:hover {
+     background-color: #218838;
+   }
+   
+   footer {
+     background-color: #343a40;
+     color: white;
+     padding: 20px 0;
+     text-align: center;
+   }
+   
+   .btn-danger {
+     background-color: #dc3545;
+     border-color: #dc3545;
+   }
+   
+   .btn-danger:hover {
+     background-color: #c82333;
+     border-color: #bd2130;
+   }
+   
