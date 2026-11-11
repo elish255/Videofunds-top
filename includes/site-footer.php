@@ -48,13 +48,11 @@
   var dialog=document.getElementById('vfSupportDialog');
   var openButton=document.getElementById('vfSupportOpen');
   var closeButton=document.getElementById('vfSupportClose');
+  var navSupport=document.getElementById('vfNavSupport');
   if(!dialog||!openButton||!closeButton)return;
   openButton.addEventListener('click',function(){dialog.showModal();});
+  if(navSupport)navSupport.addEventListener('click',function(event){event.preventDefault();dialog.showModal();});
   closeButton.addEventListener('click',function(){dialog.close();});
   dialog.addEventListener('click',function(event){if(event.target===dialog)dialog.close();});
 })();
 </script>
-
-<a class="vf-floating-contact vf-floating-email" href="mailto:officialvideofunds@gmail.com?subject=VideoFunds%20Support" aria-label="Email VideoFunds support">
-  <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="vf-contact-label">Email Support</span>
-</a>
