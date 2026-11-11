@@ -18,7 +18,7 @@ try{
   $existing=sb_request('GET','/rest/v1/vf_manual_payment_requests?select=id,status&user_id=eq.'.rawurlencode($uid).'&stage=eq.'.rawurlencode($stage).'&status=eq.pending&order=created_at.desc&limit=1');
   $pending=$existing['data'][0]??null;
   if($pending){
-   sb_request('PATCH','/rest/v1/vf_manual_payment_requests?id=eq.'.rawurlencode((string)$pending['id']),['phone'=>$phone,'amount'=>$amounts[$stage],'created_at'=>date('c')],true,null,['Prefer'=>'return=minimal']);
+   sb_request('PATCH','/rest/v1/vf_manual_payment_requests?id=eq.'.rawurlencode((string)$pending['id']),['phone'=>$phone,'amount'=>$amounts[$stage],'created_at'=>date('c')],true,null,['Prefer: return=minimal']);
    mp_out(200,['request_id'=>$pending['id'],'status'=>'pending','message'=>'Ombi lako tayari lipo kwenye foleni ya Admin.']);
   }
   $insert=sb_request('POST','/rest/v1/vf_manual_payment_requests',['user_id'=>$uid,'stage'=>$stage,'phone'=>$phone,'amount'=>$amounts[$stage],'status'=>'pending'],true,null,['Prefer'=>'return=representation']);
@@ -33,4 +33,7 @@ try{
   mp_out(200,['status'=>$row['status'],'stage'=>$row['stage'],'next_url'=>$next[$row['stage']]??'dashboard.php']);
  }
  mp_out(405,['message'=>'Method haikubaliki.']);
-}catch(Throwable $e){error_log('Manual payment request: '.$e->getMessage());mp_out(500,['message'=>'Imeshindikana kutuma taarifa. Hakikisha database migration imewekwa kisha jaribu tena.']);}
+}catch(Throwable $e){
+ error_log('VideoFunds manual-payment.php error: '.$e->getMessage());
+ mp_out(500,['message'=>'Imeshindikana kuhifadhi taarifa za malipo. Tafadhali jaribu tena baada ya muda mfupi.']);
+}
