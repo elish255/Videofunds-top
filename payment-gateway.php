@@ -3,7 +3,11 @@
 require_once __DIR__.'/flow_common.php';
 header('Content-Type: application/json; charset=utf-8');
 function sp_out(int $code,array $data): void { http_response_code($code); echo json_encode($data,JSON_UNESCAPED_SLASHES); exit; }
-function sp_env(string $key): string { return trim((string)getenv($key)); }
+function sp_env(string $key): string {
+  $value=getenv($key);
+  if($value===false || trim((string)$value)==='') $value=$_SERVER[$key]??$_ENV[$key]??'';
+  return trim((string)$value);
+}
 function sp_provider(string $path,array $payload,string $reference=''): array {
   $key=sp_env('SPLASHPAY_API_KEY'); $secret=sp_env('SPLASHPAY_API_SECRET');
   if($key===''||$secret==='') throw new DomainException('PAYMENT_PROVIDER_NOT_CONFIGURED');

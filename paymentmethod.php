@@ -74,14 +74,7 @@ input[type=tel]{width:100%;padding:14px;border:0;outline:0;font:inherit;font-siz
 <div class="phone-wrap"><span class="prefix">🇹🇿 +255</span><input id="phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="0712345678" maxlength="13" required></div>
 <button id="submit" class="pay-btn" type="submit">LIPA SASA</button><p id="msg" role="status" aria-live="polite"></p>
 </form>
-<div class="manual-box" id="manualBox">
- <h2>Umeshafanya malipo kwa LIPA NAMBA?</h2>
- <p>Baada ya kulipia TZS <?=$amountText?>, weka namba ya simu uliyotumia. Taarifa zitatumwa kwa Admin kwa ajili ya kuhakikiwa. Account itaendelea baada ya Admin ku-approve.</p>
- <label for="manualPhone">Namba ya simu uliyotumia kulipia</label>
- <input id="manualPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="0712345678" maxlength="13">
- <button class="manual-btn" id="manualSubmit" type="button">NIMELIPIA — THIBITISHA</button>
- <div class="manual-status" id="manualStatus" role="status" aria-live="polite"></div>
-</div>
+
 <div class="powered">Malipo salama ya simu au uthibitisho wa LIPA NAMBA</div>
 </div></section>
 <section class="payment-card">
@@ -99,6 +92,18 @@ foreach($operators as $op): ?>
 <div class="operator-steps"><ol class="steps"><?php foreach($op['steps'] as $step): ?><li><?=str_replace('[amount]','TZS '.$amountText,$step)?></li><?php endforeach; ?></ol><div class="biz">Jina la Biashara: <b>VIDEOFUNDS TOP</b></div></div>
 </div>
 <?php endforeach; ?>
+</section>
+<section class="payment-card" aria-labelledby="manualTitle">
+<div class="form-body">
+<div class="manual-box" id="manualBox">
+ <h2 id="manualTitle">Umeshafanya malipo kwa LIPA NAMBA?</h2>
+ <p>Baada ya kulipia TZS <?=$amountText?>, weka namba ya simu uliyotumia. Taarifa zitatumwa kwa ajili ya kuhakikiwa. Account itaendelea baada ya Malipo Kuthibishwa.</p>
+ <label for="manualPhone">Namba ya simu uliyotumia kulipia</label>
+ <input id="manualPhone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="0712345678" maxlength="13">
+ <button class="manual-btn" id="manualSubmit" type="button">NIMELIPIA — THIBITISHA</button>
+ <div class="manual-status" id="manualStatus" role="status" aria-live="polite"></div>
+</div>
+</div>
 </section>
 </main>
 <div id="loader"><div><div class="spinner"></div><b>Inatuma ombi la malipo...</b><p>Tafadhali subiri na uangalie simu yako.</p></div></div>
