@@ -65,6 +65,8 @@ $statusLabels=['pending'=>'Pending','approved'=>'Approved','paid'=>'Paid','rejec
             width:250px; 
         }
         .payment-card:hover { transform:scale(1.02); box-shadow:0 10px 20px rgba(0,0,0,0.1); }
+        .payment-card-disabled { cursor:not-allowed; opacity:.72; }
+        .payment-card-disabled:hover { transform:none; box-shadow:none; }
         .payment-img { max-width:100px; margin-bottom:15px; }
         .method-title { font-size:1.3rem; font-weight:bold; color:#18610A; }
         .balance-info { 
@@ -160,10 +162,10 @@ $statusLabels=['pending'=>'Pending','approved'=>'Approved','paid'=>'Paid','rejec
     <div class="method-note">You need at least $<?php echo number_format($minWithdrawal, 2); ?> to start a withdrawal. Keep watching videos to grow your balance.</div>
 <?php else: ?>
     <div style="text-align:center;">
-        <div class="payment-card" onclick="location.href='visacardnumber.php';">
-            <img src="images/paysystems/en/card.png" class="payment-img"><br>
-            <div class="method-title">Visa Card</div>
-            <p>Withdrawal using card</p>
+        <div class="payment-card payment-card-disabled" aria-disabled="true" title="Card payouts are unavailable until a tokenized payout provider is connected">
+            <img src="images/paysystems/en/card.png" class="payment-img" alt=""><br>
+            <div class="method-title">Card payouts unavailable</div>
+            <p>We do not collect full card numbers or security codes.</p>
         </div>
         <div class="payment-card" onclick="location.href='enterphonenumber.php';">
             <img src="images/paysystems/en/phone.png" class="payment-img"><br>

@@ -21,17 +21,36 @@ function sb_auth(string $path,array $payload): array {
     $response = sb_request('POST', '/auth/v1/'.$path, $payload, false, null);
     return is_array($response['data'] ?? null) ? $response['data'] : [];
 }
-function sb_set_auth_cookies(array $auth): void {
+function sb_session_cookie_options(int $expires): array {
     $secure=(!empty($_SERVER['HTTPS'])&&$_SERVER['HTTPS']!=='off')||($_SERVER['HTTP_X_FORWARDED_PROTO']??'')==='https';
-    $opts=['expires'=>time()+(int)($auth['expires_in']??3600),'path'=>'/','secure'=>$secure,'httponly'=>true,'samesite'=>'Lax'];
+    return ['expires'=>$expires,'path'=>'/','secure'=>$secure,'httponly'=>true,'samesite'=>'Lax'];
+}
+function sb_set_last_activity_cookie(): void {
+    $timestamp=(string)time();
+    $signature=hash_hmac('sha256',$timestamp,sb_service_key());
+    setcookie('vf_last_activity',$timestamp.'.'.$signature,sb_session_cookie_options(time()+30*60));
+}
+function sb_session_is_idle_expired(): bool {
+    $parts=explode('.',(string)($_COOKIE['vf_last_activity']??''),2);
+    if(count($parts)!==2||!ctype_digit($parts[0]))return true;
+    $timestamp=(int)$parts[0];
+    if($timestamp>time()||time()-$timestamp>=30*60)return true;
+    return !hash_equals(hash_hmac('sha256',$parts[0],sb_service_key()),$parts[1]);
+}
+function sb_set_auth_cookies(array $auth): void {
+    $opts=sb_session_cookie_options(time()+(int)($auth['expires_in']??3600));
     setcookie('vf_access_token',(string)$auth['access_token'],$opts);
     $opts['expires']=time()+60*60*24*30;setcookie('vf_refresh_token',(string)($auth['refresh_token']??''),$opts);
+    sb_set_last_activity_cookie();
 }
-function sb_clear_auth_cookies(): void { foreach(['vf_access_token','vf_refresh_token'] as $n)setcookie($n,'',['expires'=>1,'path'=>'/','httponly'=>true,'samesite'=>'Lax']); }
+function sb_clear_auth_cookies(): void {
+    foreach(['vf_access_token','vf_refresh_token','vf_last_activity'] as $name)setcookie($name,'',sb_session_cookie_options(1));
+}
 function sb_current_user(): ?array {
     static $user=false;if($user!==false)return $user;
     $token=$_COOKIE['vf_access_token']??'';if($token==='')return $user=null;
-    try{$r=sb_request('GET','/auth/v1/user',null,false,$token);$user=$r['data'];return $user;}
+    if(sb_session_is_idle_expired()){sb_clear_auth_cookies();return $user=null;}
+    try{$r=sb_request('GET','/auth/v1/user',null,false,$token);$user=$r['data'];sb_set_last_activity_cookie();return $user;}
     catch(Throwable $e){$refresh=$_COOKIE['vf_refresh_token']??'';if($refresh!==''){try{$a=sb_auth('token?grant_type=refresh_token',['refresh_token'=>$refresh]);sb_set_auth_cookies($a);$user=$a['user']??null;return $user;}catch(Throwable $ignored){}}
         sb_clear_auth_cookies();return $user=null;}
 }

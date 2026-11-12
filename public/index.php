@@ -53,7 +53,7 @@ $og_image = "https://videofundtop.free.nf/preview.jpg"; // Make sure this image 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background-image: url('background.png'); background-size: cover; background-position: center center; background-repeat: no-repeat; background-attachment: fixed; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; position: relative; }
+        body { font-family: 'Inter', sans-serif; background-image: url('background.png'); background-size: cover; background-position: center center; background-repeat: no-repeat; background-attachment: fixed; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0; position: relative; }
         body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.55); z-index: 0; }
         .navbar { background-color: #68162e !important; box-shadow: 0 2px 8px rgba(0,0,0,0.2); padding: 0.5rem 1rem; }
         .navbar-brand { font-weight: bold; font-size: 1.6rem; color: #007bff !important; }
@@ -62,7 +62,7 @@ $og_image = "https://videofundtop.free.nf/preview.jpg"; // Make sure this image 
         .nav-link:hover { color: #d4d4d4 !important; }
         .navbar-toggler { border-color: rgba(255,255,255,0.6); }
         .navbar-toggler-icon { background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(255,255,255,0.9)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E"); }
-        .app-wrapper { position: relative; z-index: 2; width: 100%; max-width: 480px; margin: 85px auto 80px auto; padding: 0 16px; }
+        .app-wrapper { position: relative; z-index: 2; width: 100%; max-width: 480px; flex: 1 0 auto; display: flex; align-items: center; margin: 85px auto 40px auto; padding: 0 16px; }
         .card { background: rgba(255, 255, 255, 0.97); border-radius: 26px; padding: 20px 18px; box-shadow: 0 16px 32px rgba(0, 0, 0, 0.25); }
         .logo { text-align: center; font-size: 1.5rem; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #007bff; }
         .tabs { display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1.5px solid #e5e7eb; }
@@ -79,7 +79,7 @@ $og_image = "https://videofundtop.free.nf/preview.jpg"; // Make sure this image 
         .form { display: none; }
         .form.active { display: block; }
         .country-info { background: #eef2ff; padding: 6px 10px; border-radius: 50px; margin-bottom: 16px; text-align: center; font-weight: 500; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: #2c3e50; padding: 7px 16px; text-align: center; color: #ecf0f1; font-size: 0.7rem; z-index: 1000; }
+        .bottom-bar { display: none; }
         @media (max-width: 450px) { .card { padding: 16px 12px; } .app-wrapper { margin-top: 90px; } .navbar-brand { font-size: 1.3rem; } }
     </style>
 </head>
@@ -135,8 +135,6 @@ $og_image = "https://videofundtop.free.nf/preview.jpg"; // Make sure this image 
         </div>
     </div>
 </div>
-
-<div class="bottom-bar"><p><i class="fas fa-copyright"></i> 2025-2040 VideoFunds — Watch Videos & Earn Real Money</p></div>
 
 <script>
     // Tab switching
