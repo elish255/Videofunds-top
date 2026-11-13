@@ -105,8 +105,6 @@ $balance=(float)($profile['balance']??5.00);
             isValid = false;
         } else {
             document.getElementById('phoneError').style.display = 'none';
-            // Save phone number to localStorage so that endpay.php can display it
-            localStorage.setItem('userPhoneNumber', phone);
         }
         
         const amount = parseFloat(document.getElementById('withdrawAmount').value);

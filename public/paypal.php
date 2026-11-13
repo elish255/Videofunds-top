@@ -1,3 +1,9 @@
+<?php
+require_once __DIR__ . '/supabase.php';
+$user = sb_require_user();
+$profile = sb_profile((string)$user['id']);
+$balance = (float)($profile['balance'] ?? 0);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,12 +79,20 @@
 
 <div class="form-container">
     <div class="form-title">🌐 Enter PayPal Email</div>
-    <div class="balance-info">💰 Your Balance: $5.00 | Min: $200.00</div>
-    <form method="POST">
-        <input type="email" name="paypal_email" class="input-field" placeholder="your@paypal.com" required>
-        <input type="number" step="0.01" name="amount" class="input-field" placeholder="Amount in USD" required>
-        <button type="submit" class="submit-button">Withdrawal money</button>
-            </form>
+    <div class="balance-info">Available balance: $<?= number_format($balance, 2) ?></div>
+    <p id="payout-status" role="status" style="text-align:center;line-height:1.5;max-width:480px;margin:0 auto 1rem;">
+        PayPal withdrawals are temporarily unavailable until secure payout processing is configured.
+        Never enter your PayPal password or pay an upfront fee to withdraw.
+    </p>
+    <form method="POST" aria-describedby="payout-status">
+        <fieldset disabled style="border:0;padding:0;margin:0;">
+            <label for="paypal-email">PayPal email</label>
+            <input id="paypal-email" type="email" name="paypal_email" class="input-field" autocomplete="email" placeholder="name@example.com">
+            <label for="withdraw-amount">Withdrawal amount (USD)</label>
+            <input id="withdraw-amount" type="number" name="amount" min="0.01" max="<?= htmlspecialchars((string)$balance, ENT_QUOTES, 'UTF-8') ?>" step="0.01" class="input-field" placeholder="Amount in USD">
+            <button type="submit" class="submit-button">Payouts unavailable</button>
+        </fieldset>
+    </form>
     <div style="text-align:center; margin-top:15px;"><a href="choosepayment.php" style="color:gray;">← Back to methods</a></div>
 </div>
 
