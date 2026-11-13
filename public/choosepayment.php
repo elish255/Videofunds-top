@@ -172,10 +172,10 @@ $statusLabels=['pending'=>'Pending','approved'=>'Approved','paid'=>'Paid','rejec
             <div class="method-title">Phone Bill</div>
             <p>Withdrawal using phone bill</p>
         </div>
-        <div class="payment-card" onclick="location.href='paypal.php';">
-            <img src="images/paysystems/en/paypal.png" class="payment-img"><br>
-            <div class="method-title">PayPal</div>
-            <p>Withdrawal using PayPal</p>
+        <div class="payment-card payment-card-disabled" aria-disabled="true" title="PayPal payouts are temporarily unavailable">
+            <img src="images/paysystems/en/paypal.png" class="payment-img" alt=""><br>
+            <div class="method-title">PayPal Unavailable</div>
+            <p>Secure PayPal payout processing is not available yet.</p>
         </div>
     </div>
 <?php endif; ?>

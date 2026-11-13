@@ -62,8 +62,8 @@ $og_image = "https://videofundtop.free.nf/preview.jpg"; // Make sure this image 
         .nav-link:hover { color: #d4d4d4 !important; }
         .navbar-toggler { border-color: rgba(255,255,255,0.6); }
         .navbar-toggler-icon { background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba(255,255,255,0.9)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E"); }
-        .app-wrapper { position: relative; z-index: 2; width: 100%; max-width: 480px; flex: 1 0 auto; display: flex; align-items: center; margin: 85px auto 40px auto; padding: 0 16px; }
-        .card { background: rgba(255, 255, 255, 0.97); border-radius: 26px; padding: 20px 18px; box-shadow: 0 16px 32px rgba(0, 0, 0, 0.25); }
+        .app-wrapper { position: relative; z-index: 2; width: 100%; max-width: 520px; flex: 1 0 auto; display: flex; align-items: center; margin: 86px auto 32px; padding: 0 16px; }
+        .card { width: 100%; background: rgba(255, 255, 255, 0.97); border-radius: 26px; padding: 24px 24px; box-shadow: 0 16px 32px rgba(0, 0, 0, 0.25); }
         .logo { text-align: center; font-size: 1.5rem; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #007bff; }
         .tabs { display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1.5px solid #e5e7eb; }
         .tab { flex: 1; text-align: center; padding: 6px 4px; cursor: pointer; font-weight: 600; font-size: 0.85rem; color: #4b5563; }
@@ -80,7 +80,19 @@ $og_image = "https://videofundtop.free.nf/preview.jpg"; // Make sure this image 
         .form.active { display: block; }
         .country-info { background: #eef2ff; padding: 6px 10px; border-radius: 50px; margin-bottom: 16px; text-align: center; font-weight: 500; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; gap: 6px; }
         .bottom-bar { display: none; }
-        @media (max-width: 450px) { .card { padding: 16px 12px; } .app-wrapper { margin-top: 90px; } .navbar-brand { font-size: 1.3rem; } }
+        @media (max-width: 767px) {
+            body { background-attachment: scroll; }
+            .app-wrapper { align-items: flex-start; margin: 76px auto 24px; }
+            .card { padding: 20px 18px; }
+        }
+        @media (max-width: 450px) {
+            .card { padding: 16px 12px; border-radius: 22px; }
+            .navbar-brand { font-size: 1.3rem; }
+            .tab { font-size: 0.82rem; }
+        }
+        @media (max-height: 650px) and (min-width: 768px) {
+            .app-wrapper { align-items: flex-start; margin-top: 76px; }
+        }
     </style>
 </head>
 <body>
