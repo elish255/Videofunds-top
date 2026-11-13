@@ -9,7 +9,7 @@ $balance = (float)($profile['balance'] ?? 0);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>PayPal Withdrawal - VideoFunds</title>
+    <title>PayPal Unavailable - VideoFunds</title>
     <!-- CSS na JS za dashboard -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="css/bootstrap.css">
@@ -72,13 +72,13 @@ $balance = (float)($profile['balance'] ?? 0);
 <div class="container">
     <div class="row">
         <div class="col-lg-12 text-center">
-            <h1 class="page-header">Withdraw to PayPal</h1>
+            <h1 class="page-header">PayPal Unavailable</h1>
         </div>
     </div>
 </div>
 
 <div class="form-container">
-    <div class="form-title">🌐 Enter PayPal Email</div>
+    <div class="form-title">PayPal Unavailable</div>
     <div class="balance-info">Available balance: $<?= number_format($balance, 2) ?></div>
     <p id="payout-status" role="status" style="text-align:center;line-height:1.5;max-width:480px;margin:0 auto 1rem;">
         PayPal withdrawals are temporarily unavailable until secure payout processing is configured.
